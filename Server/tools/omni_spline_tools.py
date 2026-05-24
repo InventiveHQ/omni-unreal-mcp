@@ -55,22 +55,22 @@ def register_omni_spline_tools(mcp: FastMCP):
             points = {pts_literal!r}
             closed = {bool(closed_loop)}
 
-            world = unreal.EditorLevelLibrary.get_editor_world()
-            spawned = unreal.EditorLevelLibrary.spawn_actor_from_class(
-                unreal.Actor, unreal.Vector(*location), unreal.Rotator(0, 0, 0)
+            actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+            spawned = actor_subsys.spawn_actor_from_class(
+                unreal.StaticMeshActor, unreal.Vector(*location), unreal.Rotator(0, 0, 0)
             )
             spawned.set_actor_label(actor_name)
 
-            spline = unreal.SplineComponent(spawned)
-            spline.attach_to_component(spawned.get_root_component() or spawned.root_component,
-                                      "", unreal.AttachmentRule.KEEP_RELATIVE,
-                                      unreal.AttachmentRule.KEEP_RELATIVE,
-                                      unreal.AttachmentRule.KEEP_RELATIVE, False)
-            spline.register_component()
+            # AddComponentByClass is the only Python-reachable way to attach a new
+            # component to a live actor (add_instance_component isn't exposed).
+            spline = spawned.call_method(
+                'AddComponentByClass',
+                args=(unreal.SplineComponent.static_class(),
+                      False, unreal.Transform(), False)
+            )
             spline.set_closed_loop(closed)
-
             spline.clear_spline_points(False)
-            for i, p in enumerate(points):
+            for p in points:
                 spline.add_spline_world_point(unreal.Vector(*p), True)
             spline.update_spline()
 
@@ -97,7 +97,8 @@ def register_omni_spline_tools(mcp: FastMCP):
             world_point = {list(world_point)!r}
             update = {bool(update)}
 
-            actors = unreal.EditorLevelLibrary.get_all_level_actors()
+            actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+            actors = actor_subsys.get_all_level_actors()
             target = next((a for a in actors if a.get_actor_label() == actor_name), None)
             if not target:
                 print(json.dumps({{"success": False, "error": f"Actor {{actor_name!r}} not found"}}))
@@ -122,7 +123,8 @@ def register_omni_spline_tools(mcp: FastMCP):
             import unreal, json
             actor_name = {actor_name!r}
 
-            actors = unreal.EditorLevelLibrary.get_all_level_actors()
+            actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+            actors = actor_subsys.get_all_level_actors()
             target = next((a for a in actors if a.get_actor_label() == actor_name), None)
             if not target:
                 print(json.dumps({{"success": False, "error": "Actor not found"}}))

@@ -52,16 +52,15 @@ def register_omni_transaction_tools(mcp: FastMCP):
                 "    unreal.StaticMeshActor, unreal.Vector(i*300, 0, 100), unreal.Rotator())"
             )
         """
-        # Indent the user's block by 4 spaces so it sits inside the with-block.
         indented = "\n".join("    " + line for line in python_block.splitlines())
-        script = textwrap.dedent(f'''
-            import unreal, json
-            description = {description!r}
-            try:
-                with unreal.ScopedEditorTransaction(description):
-{indented}
-                print(json.dumps({{"success": True, "transaction": description}}))
-            except Exception as e:
-                print(json.dumps({{"success": False, "error": str(e)}}))
-        ''').lstrip()
+        script = (
+            "import unreal, json\n"
+            f"description = {description!r}\n"
+            "try:\n"
+            "    with unreal.ScopedEditorTransaction(description):\n"
+            f"{indented}\n"
+            '    print(json.dumps({"success": True, "transaction": description}))\n'
+            "except Exception as e:\n"
+            '    print(json.dumps({"success": False, "error": str(e)}))\n'
+        )
         return _run_python(ctx, script)
