@@ -315,6 +315,13 @@ from tools.input_tools import register_input_tools
 from tools.procedural_tools import register_procedural_tools
 from tools.pcg_tools import register_pcg_tools
 
+# --- omni-unreal-mcp additions (Phase 1 ports / fresh impls) -------------
+from tools.omni_viewport_tools import register_omni_viewport_tools
+from tools.omni_gameplay_tag_tools import register_omni_gameplay_tag_tools
+from tools.omni_datatable_tools import register_omni_datatable_tools
+from tools.omni_statetree_tools import register_omni_statetree_tools
+from tools.omni_terrain_tools import register_omni_terrain_tools
+
 MODULE_REGISTRY = {
     "editor":                register_editor_tools,
     "blueprint":             register_blueprint_tools,
@@ -347,6 +354,12 @@ MODULE_REGISTRY = {
     "input":                 register_input_tools,
     "procedural":            register_procedural_tools,
     "pcg":                   register_pcg_tools,
+    # omni-unreal-mcp additions (commands wired to C++ handlers added in Phase 2)
+    "omni_viewport":         register_omni_viewport_tools,
+    "omni_gameplay_tag":     register_omni_gameplay_tag_tools,
+    "omni_datatable":        register_omni_datatable_tools,
+    "omni_statetree":        register_omni_statetree_tools,
+    "omni_terrain":          register_omni_terrain_tools,
 }
 
 # Sub-modules that are covered by their parent (e.g. "widget" loads all widget_* sub-modules).

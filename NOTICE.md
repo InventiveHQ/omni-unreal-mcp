@@ -30,7 +30,28 @@ records the lineage.
 When we copy command implementations from other projects, the source file
 keeps its original copyright notice and is listed here.
 
-*(No additional ports yet — Phase 1.)*
+#### Phase 1 ports (Server/tools/omni_*.py)
+
+- **`omni_viewport_tools.py`** — `take_screenshot` and `move_editor_camera`
+  adapted from [runreal/unreal-mcp](https://github.com/runreal/unreal-mcp)
+  (MIT). Original used Python Remote Execution; reimplemented here against
+  our TCP bridge architecture. Specifically inspired by:
+  - `server/editor/scripts/ue_take_screenshot.py`
+  - `server/editor/scripts/ue_move_camera.py`
+
+- **`omni_gameplay_tag_tools.py`** — Fresh implementation against
+  `UGameplayTagsManager` API. No code copied.
+
+- **`omni_datatable_tools.py`** — Fresh implementation against `UDataTable`
+  / `UDataTableFactory` APIs. No code copied.
+
+- **`omni_statetree_tools.py`** — Fresh implementation against `UStateTree`
+  / `UStateTreeEditorData` APIs. No code copied.
+
+- **`omni_terrain_tools.py`** — Fresh implementation against public
+  Nominatim (OSM) and Mapbox Terrain-RGB APIs. Inspired by VibeUE's
+  `terrain_data` workflow concept, but written independently. No code
+  copied.
 
 ### Projects we have looked at but NOT copied from
 
