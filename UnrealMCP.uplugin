@@ -1,0 +1,51 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "Omni Unreal MCP",
+	"Description": "Model Context Protocol server for Unreal Engine 5.7 — one unified plugin cobbled from the best of the open-source UE MCP ecosystem. Targets full surface area: Blueprints, materials, StateTree, Niagara, UMG, MetaSounds, PCG, Behavior Trees, EQS, animation, audio, gameplay tags, data tables, terrain, and more.",
+	"Category": "Editor",
+	"CreatedBy": "Inventive HQ",
+	"CreatedByURL": "https://inventivehq.com",
+	"DocsURL": "https://github.com/InventiveHQ/omni-unreal-mcp",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/InventiveHQ/omni-unreal-mcp/issues",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "UnrealMCP",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "EditorScriptingUtilities",
+			"Enabled": true
+		},
+		{
+			"Name": "CommonUI",
+			"Enabled": true
+		},
+		{
+			"Name": "Metasound",
+			"Enabled": true
+		},
+		{
+			"Name": "Niagara",
+			"Enabled": true
+		},
+		{
+			"Name": "PCG",
+			"Enabled": true
+		}
+	]
+}
