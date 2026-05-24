@@ -7,6 +7,9 @@
 #include "ImageUtils.h"
 #include "HighResScreenshot.h"
 #include "Engine/GameViewportClient.h"
+#include "Engine/SceneCapture2D.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "Misc/FileHelper.h"
 #include "GameFramework/Actor.h"
 #include "Engine/Selection.h"
@@ -1146,40 +1149,138 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleTakeEditorScreenshot(con
         }
     }
 
-    if (!ActiveClient || !ActiveClient->Viewport)
+    FIntPoint Size(0, 0);
+    if (ActiveClient && ActiveClient->Viewport)
     {
-        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("take_editor_screenshot: no active viewport found"));
-    }
-
-    FViewport* Viewport = ActiveClient->Viewport;
-    FIntPoint Size = Viewport->GetSizeXY();
-    if (Size.X <= 0 || Size.Y <= 0)
-    {
-        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("take_editor_screenshot: viewport has zero size"));
+        Size = ActiveClient->Viewport->GetSizeXY();
     }
 
     TArray<FColor> Pixels;
-    Pixels.SetNumUninitialized(Size.X * Size.Y);
-    if (!Viewport->ReadPixels(Pixels, FReadSurfaceDataFlags(), FIntRect(0, 0, Size.X, Size.Y)))
+
+    if (Size.X > 0 && Size.Y > 0)
     {
-        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("take_editor_screenshot: ReadPixels failed"));
+        // Path A: live viewport has a valid size, read its backbuffer.
+        FViewport* Viewport = ActiveClient->Viewport;
+        Pixels.SetNumUninitialized(Size.X * Size.Y);
+        if (!Viewport->ReadPixels(Pixels, FReadSurfaceDataFlags(), FIntRect(0, 0, Size.X, Size.Y)))
+        {
+            return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("take_editor_screenshot: ReadPixels failed"));
+        }
+    }
+    else
+    {
+        // Path B (fallback): viewport is collapsed / no size. Render a frame
+        // via SceneCaptureComponent2D placed at the editor camera transform.
+        // Works regardless of whether the editor viewport widget is realized.
+        if (!ActiveClient)
+        {
+            return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("take_editor_screenshot: no active viewport client and no fallback path"));
+        }
+        UWorld* World = ActiveClient->GetWorld();
+        if (!World)
+        {
+            return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("take_editor_screenshot: no editor world for fallback capture"));
+        }
+
+        Size = FIntPoint(1280, 720);
+
+        // Render target
+        UTextureRenderTarget2D* RT = NewObject<UTextureRenderTarget2D>();
+        RT->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
+        RT->InitAutoFormat(Size.X, Size.Y);
+        RT->UpdateResourceImmediate(true);
+
+        // Determine view transform: caller params win, else editor camera, else viewport client
+        FVector ViewLoc = ActiveClient->GetViewLocation();
+        FRotator ViewRot = ActiveClient->GetViewRotation();
+        const TArray<TSharedPtr<FJsonValue>>* LocArr = nullptr;
+        if (Params->TryGetArrayField(TEXT("view_location"), LocArr) && LocArr && LocArr->Num() == 3)
+        {
+            ViewLoc.X = (*LocArr)[0]->AsNumber();
+            ViewLoc.Y = (*LocArr)[1]->AsNumber();
+            ViewLoc.Z = (*LocArr)[2]->AsNumber();
+        }
+        const TArray<TSharedPtr<FJsonValue>>* RotArr = nullptr;
+        if (Params->TryGetArrayField(TEXT("view_rotation"), RotArr) && RotArr && RotArr->Num() == 3)
+        {
+            // Convention: [pitch, yaw, roll] matching unreal.Rotator constructor order
+            ViewRot.Pitch = (*RotArr)[0]->AsNumber();
+            ViewRot.Yaw = (*RotArr)[1]->AsNumber();
+            ViewRot.Roll = (*RotArr)[2]->AsNumber();
+        }
+
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        ASceneCapture2D* CaptureActor = World->SpawnActor<ASceneCapture2D>(ViewLoc, ViewRot, SpawnParams);
+        if (!CaptureActor)
+        {
+            return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("take_editor_screenshot: failed to spawn capture actor"));
+        }
+        USceneCaptureComponent2D* CaptureComp = CaptureActor->GetCaptureComponent2D();
+        CaptureComp->TextureTarget = RT;
+        // SCS_FinalToneCurveHDR runs the full post-process chain (auto-exposure, tonemap)
+        // so the captured image matches the editor viewport instead of being raw HDR
+        // (which renders as blown-out white at default exposure outdoors).
+        CaptureComp->CaptureSource = ESceneCaptureSource::SCS_FinalToneCurveHDR;
+        CaptureComp->FOVAngle = ActiveClient->ViewFOV;
+        CaptureComp->bCaptureEveryFrame = false;
+        CaptureComp->bCaptureOnMovement = false;
+        // Use the level's post-process volumes for matching exposure/look
+        CaptureComp->PostProcessSettings.bOverride_AutoExposureMethod = true;
+        CaptureComp->PostProcessSettings.AutoExposureMethod = EAutoExposureMethod::AEM_Histogram;
+        CaptureComp->PostProcessSettings.bOverride_AutoExposureBias = true;
+        CaptureComp->PostProcessSettings.AutoExposureBias = 1.0f;
+        CaptureComp->bAlwaysPersistRenderingState = true;
+        CaptureComp->ShowFlags.SetAtmosphere(true);
+        CaptureComp->ShowFlags.SetFog(true);
+        CaptureComp->ShowFlags.SetCloud(true);
+        CaptureComp->ShowFlags.SetSkyLighting(true);
+        CaptureComp->ShowFlags.SetDynamicShadows(true);
+        // Two captures: first to "warm up" auto-exposure, second is the keeper
+        CaptureComp->CaptureScene();
+        CaptureComp->CaptureScene();
+
+        // Read pixels from the render target
+        FTextureRenderTargetResource* RTResource = RT->GameThread_GetRenderTargetResource();
+        if (!RTResource)
+        {
+            CaptureActor->Destroy();
+            return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("take_editor_screenshot: render target resource null"));
+        }
+        Pixels.SetNum(Size.X * Size.Y);
+        FReadSurfaceDataFlags ReadFlags(RCM_UNorm);
+        ReadFlags.SetLinearToGamma(false);
+        if (!RTResource->ReadPixels(Pixels, ReadFlags))
+        {
+            CaptureActor->Destroy();
+            return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("take_editor_screenshot: fallback ReadPixels failed"));
+        }
+        CaptureActor->Destroy();
     }
 
     // Encode to PNG via ImageWrapper module
     IImageWrapperModule& Module = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
     TSharedPtr<IImageWrapper> Wrapper = Module.CreateImageWrapper(EImageFormat::PNG);
     Wrapper->SetRaw(Pixels.GetData(), Pixels.Num() * sizeof(FColor), Size.X, Size.Y, ERGBFormat::BGRA, 8);
-
     TArray64<uint8> Compressed = Wrapper->GetCompressed(100);
 
-    check(Compressed.Num() <= static_cast<int64>(TNumericLimits<uint32>::Max()));
-    FString Base64 = FBase64::Encode(Compressed.GetData(), static_cast<uint32>(Compressed.Num()));
+    // Write to disk — base64 strings >64KB don't make it through the bridge socket.
+    // Caller passes optional "output_path" or we default to /tmp/ue_screenshot.png.
+    FString OutPath = TEXT("/tmp/ue_screenshot.png");
+    Params->TryGetStringField(TEXT("output_path"), OutPath);
+    TArray<uint8> Compressed32(Compressed.GetData(), static_cast<int32>(Compressed.Num()));
+    if (!FFileHelper::SaveArrayToFile(Compressed32, *OutPath))
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(
+            FString::Printf(TEXT("take_editor_screenshot: failed to write %s"), *OutPath));
+    }
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetBoolField(TEXT("success"), true);
     Result->SetNumberField(TEXT("width"), Size.X);
     Result->SetNumberField(TEXT("height"), Size.Y);
-    Result->SetStringField(TEXT("image_base64"), Base64);
+    Result->SetStringField(TEXT("output_path"), OutPath);
+    Result->SetNumberField(TEXT("size_bytes"), Compressed32.Num());
     return Result;
 #else
     return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("take_editor_screenshot requires editor build"));
