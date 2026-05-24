@@ -29,6 +29,9 @@
 #include "Commands/UnrealMCPPCGCommands.h"
 #include "Commands/UnrealMCPInputCommands.h"
 #include "Commands/UnrealMCPGameplayTagCommands.h"
+#include "Commands/UnrealMCPDataTableCommands.h"
+#include "Commands/UnrealMCPStateTreeCommands.h"
+#include "Commands/UnrealMCPTerrainCommands.h"
 #include "UnrealMCPBridge.generated.h"
 
 class FMCPServerRunnable;
@@ -96,4 +99,7 @@ private:
 	TSharedPtr<FUnrealMCPPCGCommands> PCGCommands;
 	TSharedPtr<FUnrealMCPInputCommands> InputCommands;
 	TSharedPtr<FUnrealMCPGameplayTagCommands> GameplayTagCommands;
+	TSharedPtr<FUnrealMCPDataTableCommands> DataTableCommands;
+	TSharedPtr<FUnrealMCPStateTreeCommands> StateTreeCommands;
+	TSharedPtr<FUnrealMCPTerrainCommands> TerrainCommands;
 };

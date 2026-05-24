@@ -82,6 +82,14 @@ public class UnrealMCP : ModuleRules
 					"GameplayTags",
 					// Editor module needed for AddNewGameplayTagToINI (omni-unreal-mcp)
 					"GameplayTagsEditor",
+					// Editor module needed for FDataTableEditorUtils::AddRow (omni-unreal-mcp)
+					"DataTableEditor",
+					// StateTree modules (omni-unreal-mcp Phase 2.3)
+					"StateTreeModule",
+					"StateTreeEditorModule",
+					// Landscape modules (omni-unreal-mcp Phase 2.4)
+					"Landscape",
+					"LandscapeEditor",
 				}
 			);
 

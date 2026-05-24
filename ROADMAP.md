@@ -33,11 +33,11 @@ work as fresh-implementation.
 
 | Domain | Priority | Source | Notes |
 |---|---|---|---|
-| ❌ **StateTree** | high | fresh impl | Modern UE AI; complements existing BT. Use `unreal.StateTree`, `EditorAssetLibrary` to create assets. Critical for RTS unit AI in Panzer Strike. |
+| 🆕 **StateTree** | done (Phase 2.3) | fresh impl | `FUnrealMCPStateTreeCommands` registers `omni.statetree.{create_asset,list_assets}`. Uses `UAssetTools::CreateAsset` with `UStateTreeFactory` (resolved dynamically). Asset-level only — deeper state-graph editing is Phase 3 work. **Needs editor build to verify.** |
 | 🆕 **GameplayTags** | done (Phase 2.1) | fresh impl | C++ handler `FUnrealMCPGameplayTagCommands` registers `omni.gameplay_tag.{create,list,query}`. Uses `UGameplayTagsManager` + `IGameplayTagsEditorModule::AddNewGameplayTagToINI`. **Needs editor build to verify.** |
-| ❌ **DataTables** | high | fresh impl | `unreal.DataTable`, row struct creation. Tank stat sheets. |
-| ❌ **DataAssets** | high | fresh impl | Often paired with DataTables. |
-| ❌ **Enum/Struct creation** | high | fresh impl | Editor-driven creation of `UUserDefinedEnum` / `UUserDefinedStruct`. |
+| 🆕 **DataTables** | done (Phase 2.2) | fresh impl | `FUnrealMCPDataTableCommands` registers `omni.datatable.{create,add_row,import_csv}`. Uses `UAssetTools::CreateAsset` + `UDataTableFactory` + `FDataTableEditorUtils::AddRow`. **Needs editor build to verify.** |
+| ❌ **DataAssets** | medium | fresh impl | Often paired with DataTables. Not yet implemented. |
+| ❌ **Enum/Struct creation** | high | fresh impl | Editor-driven creation of `UUserDefinedEnum` / `UUserDefinedStruct`. Not yet implemented. |
 | ❌ **Landscape** | high | ChiR24/runreal | Dedicated landscape ops (heightmap import, material assignment, sections). Existing project has hand-rolled scripts; would replace. |
 | ❌ **Foliage** | high | ChiR24/runreal | Foliage type creation, scatter, wind ops. |
 | ❌ **Animation Blueprint** | medium | fresh impl | AnimBP node graph editing via `UAnimBlueprint` editor APIs. |
@@ -45,7 +45,7 @@ work as fresh-implementation.
 | ❌ **Skeleton** | medium | fresh impl | Skeleton asset queries / socket creation. |
 | ❌ **Sound Cues** | medium | fresh impl | Legacy audio asset support (MetaSound is the modern path). |
 | ❌ **Splines** | medium | fresh impl | Spline component editing, useful for rivers/roads (current project has `place_river.py`). |
-| ❌ **Terrain Data (real-world heightmap)** | medium | VibeUE-inspired fresh impl | Geocode + Mapbox elevation API. VibeUE has this; we'd reimplement against public APIs (Mapbox/OpenTopography). Not copyrightable. |
+| 🆕 **Terrain Data (real-world heightmap)** | done (Phase 2.4) | fresh impl | Two-layer: Python (`omni_terrain_tools.py`) does geocoding (OSM Nominatim) + Mapbox Terrain-RGB fetching. C++ (`FUnrealMCPTerrainCommands`) imports the PNG onto a target Landscape via `ULandscapeEditorSubsystem::ImportHeightmapFromFile`. Commands: `omni.terrain.import_heightmap_png`, `omni.terrain.import_heightmap_from_coords`. **Needs editor build to verify.** |
 | ❌ **Screenshots** | medium | runreal | Editor viewport capture for visual regression. |
 | ❌ **Viewport control** | medium | runreal | Camera-in-editor positioning. |
 | ❌ **UV Mapping** | low | fresh impl | UV channel inspection / editing. |
@@ -83,11 +83,12 @@ See `NOTICE.md` for full attribution. Quick reference:
 
 Phase 1 (shipped): scaffold, attribution, roadmap, 5 Python tool stubs.
 Phase 1.5 (shipped): vendor-neutral scrub, `Claude/` → `agents/` rename, `DYNAMIC_MODE=1` default.
-Phase 2.1 (shipped): GameplayTag C++ handler + duplicate cleanup (removed `omni_viewport_tools.py`; `take_editor_screenshot` already in base).
-Phase 2.2 (next): DataTable C++ handler (RTS tank stats).
-Phase 2.3: StateTree C++ handler (RTS unit AI).
-Phase 2.4: Terrain heightmap-import C++ handler (geocode already pure Python; works as-is).
-Phase 3: Landscape + Foliage dedicated handlers (replace ad-hoc scripts).
-Phase 4: Animation suite + Sound Cues + UV mapping + PIE testing.
-Phase 5: Panzer-Strike composites (platoon spawning, move orders).
-Phase 6: depth pass on Niagara (currently broken in base).
+Phase 2.1 (shipped): GameplayTag C++ handler + duplicate cleanup.
+Phase 2.2 (shipped): DataTable C++ handler (RTS tank stats).
+Phase 2.3 (shipped): StateTree C++ handler (RTS unit AI — asset-level).
+Phase 2.4 (shipped): Terrain heightmap C++ handler (Python fetches Mapbox, C++ imports onto landscape).
+Phase 3 (next): DataAssets, Enum/Struct creation, Landscape paint/spline ops, Foliage dedicated handler.
+Phase 4: Animation suite + Sound Cues + UV mapping + PIE testing + Screenshots.
+Phase 5: StateTree deep editing (states, transitions, tasks beyond asset creation).
+Phase 6: Panzer-Strike composites (platoon spawning, move orders, faction setup).
+Phase 7: depth pass on Niagara (currently broken in base).
