@@ -1,7 +1,7 @@
 """
 High-level material graph building tools for Unreal MCP.
 
-These tools expose a declarative interface that lets Claude describe an entire
+These tools expose a declarative interface that lets the AI assistant describe an entire
 material or material-function graph in one call.  The MaterialGraphBuilder
 engine handles auto-layout, comment-box grouping, and named reroute insertion
 before forwarding a single optimised batch to the C++ MCP bridge.

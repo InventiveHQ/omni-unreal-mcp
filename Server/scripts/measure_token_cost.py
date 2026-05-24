@@ -2,7 +2,7 @@
 
 Loads every register_*_tools() into a sandbox FastMCP, introspects the
 resulting tool schemas, counts tokens using tiktoken (cl100k_base, which
-approximates Claude/GPT tokenization within ~5%).
+approximates most modern LLM tokenizers within ~5%).
 
 Run from the Server/ directory:
     .venv/Scripts/python.exe scripts/measure_token_cost.py

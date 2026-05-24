@@ -8,7 +8,7 @@
 [![MCP](https://img.shields.io/badge/Model%20Context%20Protocol-compatible-purple.svg)](https://modelcontextprotocol.io/)
 [![Status: WIP](https://img.shields.io/badge/status-heavy%20WIP-orange.svg)](#project-status)
 
-`omni-unreal-mcp` lets AI assistants like **Claude Code**, **Claude Desktop**, **Cursor**, and **Windsurf** directly drive the Unreal Engine Editor — spawn actors, build blueprints, author materials, compose UMG widgets, wire behavior trees, generate VFX, design audio, and more — from a prompt.
+`omni-unreal-mcp` lets MCP-compatible AI assistants directly drive the Unreal Engine Editor — spawn actors, build blueprints, author materials, compose UMG widgets, wire behavior trees, generate VFX, design audio, and more — from a prompt. Any client that speaks the Model Context Protocol works (Cursor, Windsurf, Cline, Continue.dev, Codex CLI, etc.).
 
 ## Goals
 
@@ -28,19 +28,19 @@ This project is forked from [`kks3800/Unreal_MCP`](https://github.com/kks3800/Un
 > [!WARNING]
 > **This is heavy work-in-progress.** Things will break, some tools are incomplete, some are slow, and some subsystems (notably **Niagara**) are not yet functional. Expect rough edges and use at your own risk. Issues and PRs welcome.
 >
-> **Built with AI.** A large portion of this codebase was written with AI assistance — primarily **Claude** (Anthropic). Code quality varies; some parts are polished, others need a human pass. Testing coverage is uneven and ad-hoc — please report anything broken.
+> **Built with AI assistance.** A large portion of this codebase was written with AI assistance. Code quality varies; some parts are polished, others need a human pass. Testing coverage is uneven and ad-hoc — please report anything broken.
 >
 > **Unreal Engine 5.7 only.** That's what it's developed and tested against. It may work on older 5.x versions, but this is unverified — if you try it on 5.5 / 5.6, expect to fix things yourself.
 
-### Verified client compatibility
+### Client compatibility
+
+Any MCP-compatible client should work. Configuration details vary per client; see [Per-client config locations](#per-client-config-locations) below.
 
 | Client | Status | Notes |
 |--------|--------|-------|
-| Claude Code (Sonnet/Opus) | ✅ Verified — daily driver | Built and tested here |
-| Claude Desktop | 🟡 Expected to work | MCP-standard, not extensively tested |
 | Cursor | 🟡 Expected to work | MCP-standard |
-| Codex CLI (OpenAI) | 🟡 Expected to work | MCP-standard; use `DYNAMIC_MODE=1` for 128k context |
 | Windsurf | 🟡 Expected to work | MCP-standard |
+| Codex CLI (OpenAI) | 🟡 Expected to work | MCP-standard; use `DYNAMIC_MODE=1` for 128k context |
 | Cline (VS Code) | 🟡 Expected to work | MCP-standard |
 | Continue.dev | 🟡 Expected to work | MCP-standard |
 
@@ -89,8 +89,8 @@ Ask an AI assistant to:
 
 ```
  +--------------------------+
- |  AI Assistant            |   Claude Code / Desktop, Cursor, Windsurf, ...
- |  (MCP Client)            |
+ |  AI Assistant            |   Any MCP-compatible client
+ |  (MCP Client)            |   (Cursor, Windsurf, Codex, ...)
  +-----------+--------------+
              | MCP protocol (stdio)
              v
@@ -128,17 +128,17 @@ Both ship in the same repo -- the entire repository is the UE plugin folder.
 | Python | **3.10+** | For the FastMCP server |
 | `uv` package manager | latest | `pip install uv` or see [astral.sh/uv](https://astral.sh/uv) |
 | Build toolchain | MSVC / Xcode / Clang | Required to compile the C++ plugin |
-| MCP client | any | Claude Code, Claude Desktop, Cursor, Windsurf, etc. |
+| MCP client | any | Cursor, Windsurf, Codex CLI, Cline, Continue.dev, etc. |
 
 ---
 
 ## Quick Install (AI-Assisted)
 
-If you use **Claude Code**, paste this prompt and Claude will handle the rest:
+If your MCP client also has filesystem / shell access (most agentic coding tools do), paste this prompt and let the assistant handle the rest:
 
-> Install UnrealMCP into my project. The UnrealMCP repo is at `<PATH_TO_THIS_REPO>`. My Unreal project is at `<PATH_TO_YOUR_UE_PROJECT>`. Follow the instructions in the UnrealMCP README under "Manual Install", starting at Step 1.
+> Install omni-unreal-mcp into my project. The repo is at `<PATH_TO_THIS_REPO>`. My Unreal project is at `<PATH_TO_YOUR_UE_PROJECT>`. Follow the instructions in the README under "Manual Install", starting at Step 1.
 
-Replace the two paths. Claude will clone, set up the venv, create the `.mcp.json`, and copy optional agents.
+Replace the two paths. The assistant will clone, set up the venv, create the `.mcp.json`, and copy optional agents.
 
 ---
 
@@ -198,7 +198,7 @@ Create `.mcp.json` at your **UE project root** (the folder containing `.uproject
       "type": "stdio",
       "command": "<UE_PROJECT>/Plugins/UnrealMCP/Server/.venv/Scripts/python.exe",
       "args": ["<UE_PROJECT>/Plugins/UnrealMCP/Server/unreal_mcp_server.py"],
-      "env": {}
+      "env": { "DYNAMIC_MODE": "1" }
     }
   }
 }
@@ -212,7 +212,7 @@ Create `.mcp.json` at your **UE project root** (the folder containing `.uproject
       "type": "stdio",
       "command": "<UE_PROJECT>/Plugins/UnrealMCP/Server/.venv/bin/python",
       "args": ["<UE_PROJECT>/Plugins/UnrealMCP/Server/unreal_mcp_server.py"],
-      "env": {}
+      "env": { "DYNAMIC_MODE": "1" }
     }
   }
 }
@@ -220,7 +220,7 @@ Create `.mcp.json` at your **UE project root** (the folder containing `.uproject
 
 Use **absolute paths with forward slashes** (even on Windows). Replace `<UE_PROJECT>` with your actual project root.
 
-The `env` block is where you set optional flags — see [Reducing Context Cost](#reducing-context-cost) below for `DYNAMIC_MODE` and `ENABLED_MODULES`. For a first run, the empty `{}` is fine.
+The `env` block above sets `DYNAMIC_MODE=1` — **the recommended default**. Only 22 tools (3 meta-tools + 19 always-on core tools) load upfront (~3k tokens vs ~95k without it). The AI discovers the remaining ~430 tools on demand. See [Reducing Context Cost](#reducing-context-cost) for details and the alternative `ENABLED_MODULES` knob.
 
 #### Per-client config locations
 
@@ -228,24 +228,24 @@ The MCP config shape above is the same for every client — only the file locati
 
 | Client | Config file | Notes |
 |--------|-------------|-------|
-| **Claude Code** | `<UE_PROJECT>/.mcp.json` | Project-scoped. Restart Claude Code after editing. |
-| **Claude Desktop** | `%APPDATA%\Claude\claude_desktop_config.json` (Windows)<br>`~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) | Global. Fully quit + relaunch the app to reload. |
 | **Cursor** | `~/.cursor/mcp.json` (global) or `<UE_PROJECT>/.cursor/mcp.json` (project) | See Cursor's MCP docs. |
 | **Windsurf** | `~/.codeium/windsurf/mcp_config.json` | See Windsurf's MCP docs. |
 | **Codex CLI** (OpenAI) | `~/.codex/config.json` under `mcp_servers` | See OpenAI's Codex CLI docs. |
 | **Cline** (VS Code) | VS Code settings → `cline.mcpServers` | JSON same shape, nested in settings. |
 | **Continue.dev** | `~/.continue/config.json` | See Continue docs. |
+| **Other MCP clients** | Per-client `.mcp.json` location | Use the project-root `<UE_PROJECT>/.mcp.json` convention where supported. |
 
 Any MCP-compatible client works — the plugin is client-agnostic.
 
-### Step 4 -- (Optional) Install the Claude Code widget agent
+### Step 4 -- (Optional) Install the widget agent
 
-Copies a specialized agent that helps Claude Code build UMG widgets with better pattern awareness:
+Copies a specialized agent file that helps your MCP client build UMG widgets with better pattern awareness. Agent format follows the broadly-adopted markdown-with-frontmatter convention — adjust the target directory to match your client's agents directory.
 
 ```bash
-mkdir -p <UE_PROJECT>/.claude/agents
-cp <UE_PROJECT>/Plugins/UnrealMCP/Claude/agents/mcp-widget-expert.md \
-   <UE_PROJECT>/.claude/agents/
+# Example for clients that use a project-local .agents directory:
+mkdir -p <UE_PROJECT>/.agents
+cp <UE_PROJECT>/Plugins/UnrealMCP/agents/mcp-widget-expert.md \
+   <UE_PROJECT>/.agents/
 ```
 
 ### Step 5 -- Start using it
@@ -283,13 +283,13 @@ If all three work, you're ready.
 
 ## Reducing Context Cost
 
-UnrealMCP exposes **449 tools costing ~95k tokens** when loaded in full. On 200k-context Claude models that's tight-but-workable; on 128k-context models (GPT-4, many Cursor variants) it doesn't fit.
+omni-unreal-mcp exposes **~454 tools costing ~95k tokens** when loaded in full. On 200k-context LLMs that's tight-but-workable; on 128k-context models (GPT-4, many Cursor variants) it doesn't fit. **`DYNAMIC_MODE=1` is the recommended default** — it drops upfront cost to ~3k tokens while keeping all tools reachable via search.
 
 Two independent knobs, both set in `.mcp.json` under the server's `env` block:
 
 | Knob | What it does | When to use |
 |------|--------------|-------------|
-| `DYNAMIC_MODE=1` | Exposes only 22 tools (19 core + 3 meta-tools `search_unreal_tools` / `describe_unreal_tools` / `execute_unreal_tool`). Drops upfront cost from ~95k → ~3k tokens (**~97% reduction**). AI discovers non-core tools on demand. | Any client that isn't Claude Code. Highly recommended. |
+| `DYNAMIC_MODE=1` | Exposes only 22 tools (19 core + 3 meta-tools `search_unreal_tools` / `describe_unreal_tools` / `execute_unreal_tool`). Drops upfront cost from ~95k → ~3k tokens (**~97% reduction**). The AI discovers non-core tools on demand. | **Recommended default for all clients.** |
 | `ENABLED_MODULES=...` | Loads only selected tool modules. Reduces everything (including what's reachable via search in dynamic mode). | When you know you only need certain domains. |
 
 Use one, the other, or both. They compose cleanly.
@@ -359,7 +359,7 @@ Per-task cost: ~1-2k tokens of accumulated search/describe responses. Break-even
 
 `editor`, `blueprint`, `blueprint_nodes`, `blueprint_inspect`, `blueprint_search`, `blueprint_graph`, `blueprint_compound`, `blueprint_intelligence`, `widget` (or individual sub-modules: `widget_core`, `widget_commonui`, `widget_batch`, `widget_discovery`, `widget_style`, `widget_input`, `widget_animation`, `widget_commonui_ext`, `widget_readonly`), `material`, `material_graph`, `metasound`, `niagara` (scaffolded, not functional), `asset`, `behavior_tree`, `blackboard`, `eqs`, `pcg`, `input`, `procedural`, `project`.
 
-After changing `ENABLED_MODULES` or `DYNAMIC_MODE`, **fully quit and restart your MCP client** so it re-reads the config and fetches the new tool catalog. Just reconnecting (e.g. Claude Code's `/mcp`) is often not enough — most clients cache tool schemas per session.
+After changing `ENABLED_MODULES` or `DYNAMIC_MODE`, **fully quit and restart your MCP client** so it re-reads the config and fetches the new tool catalog. Just reconnecting (e.g. via a `/mcp`-style reload command) is often not enough — most clients cache tool schemas per session.
 
 ---
 
@@ -503,10 +503,8 @@ UnrealMCP/                        # repo root IS the UE plugin folder
 |   |-- unreal_mcp_server.py      # FastMCP entry point
 |   |-- tools/                    # 21 tool modules (~20k lines, 449 tools)
 |   +-- scripts/                  # standalone test scripts (no MCP required)
-|-- Claude/
-|   |-- .mcp.json.template        # MCP config template
-|   +-- agents/
-|       +-- mcp-widget-expert.md  # optional Claude Code agent
+|-- agents/
+|   +-- mcp-widget-expert.md      # optional widget-authoring agent
 |-- Config/
 |   +-- FilterPlugin.ini
 |-- README.md
@@ -535,8 +533,8 @@ This plugin is for **local development use only.**
 **Does this work with OpenAI's models / GPT-4 / Codex CLI?**
 Yes — UnrealMCP is client-agnostic. Any MCP-compatible client with any LLM backend works. For 128k-context models, use `DYNAMIC_MODE=1` so the plugin fits comfortably.
 
-**Do I need a paid Claude subscription?**
-No — the plugin runs in Unreal and is free. You need *some* MCP client; many are free. Claude Desktop has a free tier. Claude API / Cursor / Windsurf / Codex have their own pricing.
+**Do I need a paid AI subscription?**
+No — the plugin runs in Unreal and is free. You need *some* MCP client; many have free tiers. Cursor / Windsurf / Codex CLI have their own pricing.
 
 **Will this mess up my project?**
 It *can*. The plugin drives the editor with full permissions — it can spawn, modify, and delete actors and assets just like you clicking in the editor. Always work in source control. There's a protected-path validator preventing engine-content writes, but project-content writes are on you.
@@ -567,7 +565,7 @@ No — the TCP server is bound to 127.0.0.1 and handles one command at a time. F
 ## Troubleshooting
 
 **MCP client shows no tools after install.**
-Restart the MCP client after creating `.mcp.json`. Claude Code and Claude Desktop only read the config at startup.
+Restart the MCP client after creating `.mcp.json`. Most clients only read the config at startup.
 
 **"Not connected to Unreal Engine" errors.**
 The Unreal Editor must be running with the plugin loaded. Check the editor log for `UnrealMCP TCP server listening on port 55557`.
@@ -591,7 +589,7 @@ python scripts/blueprints/test_create_and_spawn_cube_blueprint.py
 ```
 
 **Tool schemas not updating after changing `DYNAMIC_MODE` or `ENABLED_MODULES`.**
-`/mcp` style reconnects only re-establish the transport; they don't always re-fetch the tool catalog. **Fully quit and relaunch the MCP client** (Claude Code, Claude Desktop, Cursor, etc.) to force a fresh tool list.
+`/mcp` style reconnects only re-establish the transport; they don't always re-fetch the tool catalog. **Fully quit and relaunch your MCP client** to force a fresh tool list.
 
 **DYNAMIC_MODE shows 22 tools but AI can't find a specific tool.**
 The AI needs to call `search_unreal_tools("<keyword>")` → `describe_unreal_tools([name])` → `execute_unreal_tool(name, params)`. If it's not doing that, make sure it has read the `search_unreal_tools` docstring (some clients truncate long descriptions -- the domain overview in the docstring is what teaches the LLM what's reachable).
@@ -637,7 +635,7 @@ This project has been **substantially rewritten and expanded** since, adding:
 
 ### Built With AI
 
-A large portion of this codebase was written with AI assistance -- primarily **Claude (Anthropic)** via Claude Code. Reviewing, testing, and direction come from a human; a lot of the mechanical C++ / Python was AI-generated. This means quality is uneven, and some areas need human cleanup. If you spot rough code, a PR is the fastest way to fix it.
+A large portion of this codebase was written with AI assistance. Reviewing, testing, and direction come from a human; a lot of the mechanical C++ / Python was AI-generated. This means quality is uneven, and some areas need human cleanup. If you spot rough code, a PR is the fastest way to fix it.
 
 ---
 

@@ -2,7 +2,7 @@
 Blueprint Intelligence Tools for Unreal MCP.
 
 Provides graph analysis and function extraction capabilities.
-These tools help Claude make intelligent decisions about Blueprint organization.
+These tools help the AI assistant make intelligent decisions about Blueprint organization.
 """
 
 import logging

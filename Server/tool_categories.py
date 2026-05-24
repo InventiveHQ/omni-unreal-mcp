@@ -58,7 +58,7 @@ MODULE_CATEGORIES: dict[str, str] = {
 # ---------------------------------------------------------------------------
 # Core tools — always visible in DYNAMIC_MODE, never surfaced via search()
 # ---------------------------------------------------------------------------
-# Target: stay below ~20 entries. Claude's tool-selection accuracy
+# Target: stay below ~20 entries. LLM tool-selection accuracy
 # degrades past 30-50 visible tools; with 3 meta-tools added, 20 core
 # leaves 23 visible total — comfortable headroom.
 
