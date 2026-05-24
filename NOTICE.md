@@ -49,9 +49,8 @@ keeps its original copyright notice and is listed here.
   / `UStateTreeEditorData` APIs. No code copied.
 
 - **`omni_terrain_tools.py`** — Fresh implementation against public
-  Nominatim (OSM) and Mapbox Terrain-RGB APIs. Inspired by VibeUE's
-  `terrain_data` workflow concept, but written independently. No code
-  copied.
+  Nominatim (OSM) and Mapbox Terrain-RGB APIs. Written independently
+  against those public endpoints. No code copied.
 
 ### Projects we have looked at but NOT copied from
 
@@ -83,11 +82,6 @@ which is not itself copyrighted).
 - **[kevinpbuckley/unreal-engine-skills](https://github.com/kevinpbuckley/unreal-engine-skills)** —
   Used as a reference for correct UE 5.7 C++ patterns. Knowledge — not code
   — informs how we implement commands. Not vendored into this repo.
-
-- **[kevinpbuckley/VibeUE](https://github.com/kevinpbuckley/VibeUE)** —
-  Aspirational reference for the full surface area we want to cover (1030
-  methods across 30 services). Not copied from; ours is an independent MIT
-  implementation.
 
 ## Patches and improvements
 

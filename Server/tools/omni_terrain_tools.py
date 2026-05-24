@@ -2,11 +2,10 @@
 Omni Terrain Tools — real-world heightmap import and geocoding.
 
 ATTRIBUTION:
-- Fresh implementation. Inspired by VibeUE's `terrain_data` workflow but
-  written from scratch against public APIs (OpenStreetMap Nominatim for
-  geocoding, Mapbox Terrain-RGB for elevation). No code copied.
-- The set of API calls used (Nominatim, Mapbox) is public and not
-  copyrighted; only specific code expression is.
+- Fresh implementation. Written from scratch against public APIs
+  (OpenStreetMap Nominatim for geocoding, Mapbox Terrain-RGB for elevation).
+  The set of API calls used is public and not copyrighted; only specific
+  code expression is.
 
 C++ HANDLER REQUIRED (Phase 2):
 - HandleTerrainImportHeightmap -> ULandscapeEditorObject + ALandscape::Import

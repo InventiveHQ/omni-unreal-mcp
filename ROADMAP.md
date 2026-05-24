@@ -1,8 +1,8 @@
 # omni-unreal-mcp roadmap
 
-The goal is **VibeUE-parity surface area** (~1030 methods across ~30 services)
-in a single MIT-licensed plugin with no cloud dependency. The base
-(`kks3800/Unreal_MCP`) covers 21 domains; this doc tracks what's still
+The goal is **broad, Python-first surface area** (target ~1000+ methods across
+~30 service domains) in a single MIT-licensed plugin with no cloud dependency.
+The base (`kks3800/Unreal_MCP`) covers 21 domains; this doc tracks what's still
 missing and where we'll cobble it from.
 
 ## Coverage matrix
@@ -77,7 +77,6 @@ See `NOTICE.md` for full attribution. Quick reference:
 | `GenOrca/unreal-mcp` | Apache 2.0 | yes — with NOTICE attribution |
 | `aadeshrao123/Unreal-MCP` | MPL 2.0 | **no direct copy** — reimplement independently |
 | `kvick-games/UnrealMCP` | (no LICENSE) | **no** — all rights reserved |
-| `VibeUE` | (closed-source ish, cloud-dependent) | **no copy** — inspiration only |
 
 ## Working order
 

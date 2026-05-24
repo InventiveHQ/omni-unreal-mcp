@@ -52,6 +52,15 @@ MODULE_CATEGORIES: dict[str, str] = {
     "procedural":              "procedural",
     "pcg":                     "pcg",
     "project":                 "project",
+    "omni_python":             "python",
+    "omni_logs":               "diagnostics",
+    "omni_asset_mgmt":         "asset",
+    "omni_research":           "research",
+    "omni_skills":             "skills",
+    "omni_terrain":            "terrain",
+    "omni_statetree":          "ai",
+    "omni_gameplay_tag":       "gameplay",
+    "omni_datatable":          "data",
 }
 
 
@@ -93,6 +102,20 @@ CORE_TOOLS: set[str] = {
     # Project overview — 2
     "get_folder_structure",
     "get_viewport_camera",
+
+    # Python + meta-tools — 10
+    # The lazy-loading surface that lets one MCP call reach the entire
+    # `unreal` Python API + asset/log/terrain/research workflows.
+    "execute_python_code",
+    "discover_python_module",
+    "discover_python_class",
+    "discover_python_function",
+    "list_python_subsystems",
+    "manage_skills",
+    "manage_asset",
+    "read_logs",
+    "terrain_data",
+    "deep_research",
 }
 
 

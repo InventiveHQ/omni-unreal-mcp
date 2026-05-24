@@ -1,7 +1,7 @@
 """
 Omni Python Tools — direct access to the in-editor Python interpreter.
 
-The headline VibeUE-parity tool. Instead of wrapping thousands of UE APIs
+The headline lazy-loading tool. Instead of wrapping thousands of UE APIs
 as individual MCP tools, this exposes the editor's full Python surface
 through one execute call. The AI gets at the `unreal` module directly.
 

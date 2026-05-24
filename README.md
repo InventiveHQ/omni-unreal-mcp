@@ -12,7 +12,7 @@
 
 ## Goals
 
-- **One plugin, full coverage.** Aim for parity with the broadest MCP surfaces in the ecosystem (e.g. VibeUE's ~1030 methods), without the cloud dependency.
+- **One plugin, full coverage.** Aim for parity with the broadest MCP surfaces in the ecosystem (~1000+ methods across the editor's full Python/C++ surface), without any cloud dependency.
 - **MIT-clean.** Cobbled only from MIT/Apache-compatible sources, with full attribution in [NOTICE.md](NOTICE.md).
 - **UE 5.7 native.** Targets the current engine; older versions are not a goal.
 - **Local only.** No API key, no cloud roundtrip. Plugin runs inside your editor, MCP server runs on localhost.

@@ -372,7 +372,7 @@ MODULE_REGISTRY = {
     "omni_datatable":        register_omni_datatable_tools,
     "omni_statetree":        register_omni_statetree_tools,
     "omni_terrain":          register_omni_terrain_tools,
-    # Phase 3: VibeUE-parity meta-tools
+    # Phase 3: lazy-loading meta-tools
     "omni_python":           register_omni_python_tools,   # execute_python_code + discovery
     "omni_logs":             register_omni_logs_tools,     # read_logs
     "omni_asset_mgmt":       register_omni_asset_mgmt_tools, # manage_asset (consolidated)
