@@ -17,10 +17,8 @@
 #include "Landscape.h"
 #include "LandscapeProxy.h"
 #include "LandscapeInfo.h"
-// NOTE: UE 5.7 has no ULandscapeEditorSubsystem — heightmap import in code
-// goes through FLandscapeImportHelper + ULandscapeEdit (low-level). Wiring
-// that up properly is a follow-up; for now this handler validates inputs
-// and reports the manual-fallback step to the caller. See ROADMAP.md.
+#include "LandscapeEdit.h"
+#include "LandscapeStreamingProxy.h"
 #endif
 
 namespace
@@ -137,20 +135,83 @@ TSharedPtr<FJsonObject> FUnrealMCPTerrainCommands::HandleImportHeightmapPNG(cons
                 : *FString::Printf(TEXT("No Landscape actor named '%s'"), *LandscapeLabel));
     }
 
-    // UE 5.7 has no public ULandscapeEditorSubsystem::ImportHeightmapFromFile
-    // shortcut. Programmatic application requires FLandscapeImportHelper +
-    // ULandscapeEdit (multi-step, version-sensitive). Returning a structured
-    // response so the caller can do the import manually via the editor.
+    // Apply via FLandscapeEditDataInterface — in-place update on existing landscape
+    // components. Heightmap dims must equal landscape vertex extent +1 (the +1 is
+    // because landscape Min/Max are inclusive). For a World Partition landscape
+    // we walk all loaded streaming proxies; unloaded cells get a warning but the
+    // op still succeeds for what's loaded.
+    ULandscapeInfo* LandscapeInfo = Landscape->GetLandscapeInfo();
+    if (!LandscapeInfo)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Landscape has no LandscapeInfo (uninitialized)"));
+    }
+
+    FIntRect Extent;
+    if (!LandscapeInfo->GetLandscapeExtent(Extent.Min.X, Extent.Min.Y, Extent.Max.X, Extent.Max.Y))
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Could not query landscape extent (no loaded proxies?)"));
+    }
+    const int32 ExpectedW = (Extent.Max.X - Extent.Min.X) + 1;
+    const int32 ExpectedH = (Extent.Max.Y - Extent.Min.Y) + 1;
+
+    if (W != ExpectedW || H != ExpectedH)
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), false);
+        Resp->SetStringField(TEXT("error"),
+            FString::Printf(TEXT("Heightmap dims %dx%d do not match landscape vertex extent %dx%d "
+                "(min %d,%d max %d,%d). Resize PNG to match before re-running."),
+                W, H, ExpectedW, ExpectedH, Extent.Min.X, Extent.Min.Y, Extent.Max.X, Extent.Max.Y));
+        Resp->SetNumberField(TEXT("expected_width"), ExpectedW);
+        Resp->SetNumberField(TEXT("expected_height"), ExpectedH);
+        Resp->SetNumberField(TEXT("got_width"), W);
+        Resp->SetNumberField(TEXT("got_height"), H);
+        return Resp;
+    }
+
+    // SetHeightData expects the data origin at (X1,Y1) — match the landscape's
+    // min coords so writes land on the correct vertex columns/rows.
+    {
+        FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
+        LandscapeEdit.SetHeightData(
+            Extent.Min.X, Extent.Min.Y, Extent.Max.X, Extent.Max.Y,
+            Heights.GetData(), /*InStride*/ 0,
+            /*InCalcNormals*/ true);
+        LandscapeEdit.Flush();
+    }
+
+    // Reregister all components on the master + every loaded proxy so the new
+    // heights become visible. Without this the editor viewport still draws stale
+    // collision/render data until something else triggers a refresh.
+    Landscape->ReregisterAllComponents();
+    int32 ReregProxyCount = 0;
+    LandscapeInfo->ForEachLandscapeProxy([&](ALandscapeProxy* Proxy) -> bool
+    {
+        if (Proxy && Proxy != Landscape)
+        {
+            Proxy->ReregisterAllComponents();
+            ++ReregProxyCount;
+        }
+        return true;
+    });
+
+    // Mark the landscape file path so the editor "Reimport" button works later
+    Landscape->ReimportHeightmapFilePath = PngPath;
+
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetBoolField(TEXT("success"), false);
+    Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(TEXT("png_path"), PngPath);
     Result->SetStringField(TEXT("landscape_actor"), Landscape->GetActorLabel());
     Result->SetNumberField(TEXT("heightmap_width"), W);
     Result->SetNumberField(TEXT("heightmap_height"), H);
+    Result->SetNumberField(TEXT("landscape_min_x"), Extent.Min.X);
+    Result->SetNumberField(TEXT("landscape_min_y"), Extent.Min.Y);
+    Result->SetNumberField(TEXT("landscape_max_x"), Extent.Max.X);
+    Result->SetNumberField(TEXT("landscape_max_y"), Extent.Max.Y);
+    Result->SetNumberField(TEXT("reregistered_proxies"), ReregProxyCount);
     Result->SetStringField(TEXT("note"),
-        TEXT("PNG decoded and target landscape found, but programmatic application "
-             "is not yet wired. Manual step: Landscape Mode > Manage > Import "
-             "from File > select the PNG. Tracked in ROADMAP.md (Phase 2.4 follow-up)."));
+        TEXT("Heightmap applied via FLandscapeEditDataInterface::SetHeightData. "
+             "For unloaded World Partition cells, reload the region and reimport."));
     return Result;
 #endif // WITH_EDITOR
 }
