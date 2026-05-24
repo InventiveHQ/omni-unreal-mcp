@@ -18,6 +18,7 @@ class FMCPCommandRegistry;
  * Command names registered (omni-namespaced):
  *   omni.statetree.create_asset  — create a new UStateTree asset
  *   omni.statetree.list_assets   — enumerate StateTree assets in /Game
+ *   omni.statetree.add_state     — add a state node (top-level or under a parent)
  */
 class UNREALMCP_API FUnrealMCPStateTreeCommands
 {
@@ -30,4 +31,5 @@ public:
 private:
     TSharedPtr<FJsonObject> HandleCreateAsset(const TSharedPtr<FJsonObject>& Params);
     TSharedPtr<FJsonObject> HandleListAssets(const TSharedPtr<FJsonObject>& Params);
+    TSharedPtr<FJsonObject> HandleAddState(const TSharedPtr<FJsonObject>& Params);
 };

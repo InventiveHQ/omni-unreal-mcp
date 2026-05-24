@@ -350,6 +350,23 @@ TSharedPtr<FJsonObject> FUnrealMCPAssetCommands::HandleListAssets(
 	// UEditorAssetLibrary::ListAssets which does a synchronous disk scan.
 	IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
 
+	// If the asset registry is still scanning (right after editor startup, or
+	// after a World Partition cell load), GetAssets blocks until the relevant
+	// packages are mounted. Bail early with a status flag so the caller can
+	// retry, instead of letting the Python TCP socket hit its recv timeout.
+	const bool bRegistryLoading = AssetRegistry && AssetRegistry->IsLoadingAssets();
+	if (bRegistryLoading)
+	{
+		TSharedPtr<FJsonObject> Pending = MakeShareable(new FJsonObject);
+		Pending->SetBoolField(TEXT("success"), true);
+		Pending->SetBoolField(TEXT("asset_registry_loading"), true);
+		Pending->SetArrayField(TEXT("assets"), TArray<TSharedPtr<FJsonValue>>());
+		Pending->SetNumberField(TEXT("count"), 0);
+		Pending->SetStringField(TEXT("note"),
+			TEXT("Asset registry is still scanning packages. Retry shortly."));
+		return Pending;
+	}
+
 	FARFilter Filter;
 	Filter.PackagePaths.Add(FName(*DirectoryPath));
 	Filter.bRecursivePaths = bRecursive;

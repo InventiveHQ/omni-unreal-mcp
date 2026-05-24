@@ -38,9 +38,14 @@ class UnrealConnection:
     MAX_RETRIES = 2         # auto-retry on transient connection failures
 
     # Commands that are known to be fast read-only queries
+    # NOTE: list_assets removed from FAST — on projects with World Partition
+    # landscapes (thousands of streaming proxies + HLODs), even an asset-registry
+    # query can blow past 10s. Use NORMAL (30s) so the C++ handler has time to
+    # finish rather than the Python side timing out and discarding a valid
+    # result. Same reasoning for get_folder_structure.
     _FAST_COMMANDS = frozenset([
-        "is_pie_active", "list_assets", "get_asset_info", "get_asset_class",
-        "get_folder_structure", "find_asset_references", "is_protected_path",
+        "is_pie_active", "get_asset_info", "get_asset_class",
+        "find_asset_references", "is_protected_path",
         "get_actors_in_level", "get_actor_properties", "get_actor_material_info",
         "find_actors_by_name",
         "get_blueprint_info", "get_blueprint_variables", "get_blueprint_graphs",

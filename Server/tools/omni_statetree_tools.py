@@ -94,3 +94,30 @@ def register_omni_statetree_tools(mcp: FastMCP):
         except Exception as e:
             logger.error(f"statetree_add_state failed: {e}")
             return {"success": False, "error": str(e)}
+
+    @mcp.tool()
+    def statetree_list_assets(
+        ctx: Context,
+        path: str = "/Game",
+    ) -> Dict[str, Any]:
+        """Enumerate StateTree assets under the given content path.
+
+        Args:
+            path: Content browser path to scan (default "/Game"). Recurses.
+
+        Returns:
+            Dict with 'assets' (list of object paths) and 'count'.
+        """
+        from unreal_mcp_server import get_unreal_connection
+        try:
+            unreal = get_unreal_connection()
+            if not unreal:
+                return {"success": False, "error": "Unreal Engine not connected"}
+            response = unreal.send_command(
+                "omni.statetree.list_assets",
+                {"path": path},
+            )
+            return (response or {}).get("result", response or {"success": False, "error": "No response"})
+        except Exception as e:
+            logger.error(f"statetree_list_assets failed: {e}")
+            return {"success": False, "error": str(e)}

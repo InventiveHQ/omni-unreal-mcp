@@ -11,6 +11,8 @@
 #if WITH_EDITOR
 #include "StateTree.h"
 #include "StateTreeEditingSubsystem.h"
+#include "StateTreeEditorData.h"
+#include "StateTreeState.h"
 #include "StateTreeFactory.h"
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
@@ -47,6 +49,10 @@ TSharedPtr<FJsonObject> FUnrealMCPStateTreeCommands::HandleCommand(
     if (CommandType == TEXT("omni.statetree.list_assets"))
     {
         return HandleListAssets(Params);
+    }
+    if (CommandType == TEXT("omni.statetree.add_state"))
+    {
+        return HandleAddState(Params);
     }
     return FUnrealMCPCommonUtils::CreateErrorResponse(
         FString::Printf(TEXT("Unknown statetree command: %s"), *CommandType));
@@ -152,6 +158,106 @@ TSharedPtr<FJsonObject> FUnrealMCPStateTreeCommands::HandleListAssets(const TSha
     return Result;
 }
 
+#if WITH_EDITOR
+namespace
+{
+    // Depth-first walk over all states in a StateTree's editor data, looking
+    // for one whose Name matches the requested parent name. Returns nullptr
+    // if no match is found.
+    UStateTreeState* FindStateByName(UStateTreeEditorData* EditorData, const FName& Target)
+    {
+        if (!EditorData) { return nullptr; }
+
+        TArray<UStateTreeState*> Stack;
+        for (UStateTreeState* SubTree : EditorData->SubTrees)
+        {
+            if (SubTree) { Stack.Add(SubTree); }
+        }
+        while (Stack.Num() > 0)
+        {
+            UStateTreeState* State = Stack.Pop(EAllowShrinking::No);
+            if (!State) { continue; }
+            if (State->Name == Target)
+            {
+                return State;
+            }
+            for (UStateTreeState* Child : State->Children)
+            {
+                if (Child) { Stack.Add(Child); }
+            }
+        }
+        return nullptr;
+    }
+}
+#endif
+
+TSharedPtr<FJsonObject> FUnrealMCPStateTreeCommands::HandleAddState(const TSharedPtr<FJsonObject>& Params)
+{
+#if !WITH_EDITOR
+    return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("omni.statetree.add_state requires editor build"));
+#else
+    FString AssetPath;
+    if (!Params->TryGetStringField(TEXT("asset_path"), AssetPath) || AssetPath.IsEmpty())
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'asset_path' parameter"));
+    }
+    FString StateName;
+    if (!Params->TryGetStringField(TEXT("state_name"), StateName) || StateName.IsEmpty())
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'state_name' parameter"));
+    }
+    FString ParentState;
+    Params->TryGetStringField(TEXT("parent_state"), ParentState);
+
+    UStateTree* StateTree = LoadObject<UStateTree>(nullptr, *AssetPath);
+    if (!StateTree)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(
+            FString::Printf(TEXT("StateTree asset not found: %s"), *AssetPath));
+    }
+
+    UStateTreeEditorData* EditorData = Cast<UStateTreeEditorData>(StateTree->EditorData);
+    if (!EditorData)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(
+            TEXT("StateTree has no UStateTreeEditorData (was the asset created via the factory?)"));
+    }
+
+    EditorData->Modify();
+
+    const FName NewStateName(*StateName);
+    FString ParentResolved = TEXT("");
+    if (ParentState.IsEmpty())
+    {
+        // Top-level state — add as a subtree.
+        UStateTreeState& NewState = EditorData->AddSubTree(NewStateName);
+        (void)NewState;
+    }
+    else
+    {
+        UStateTreeState* Parent = FindStateByName(EditorData, FName(*ParentState));
+        if (!Parent)
+        {
+            return FUnrealMCPCommonUtils::CreateErrorResponse(
+                FString::Printf(TEXT("Parent state '%s' not found in %s"), *ParentState, *AssetPath));
+        }
+        Parent->Modify();
+        UStateTreeState& NewState = Parent->AddChildState(NewStateName);
+        (void)NewState;
+        ParentResolved = ParentState;
+    }
+
+    StateTree->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("asset_path"), AssetPath);
+    Result->SetStringField(TEXT("state_name"), StateName);
+    Result->SetStringField(TEXT("parent_state"), ParentResolved);
+    return Result;
+#endif // WITH_EDITOR
+}
+
 // ============================================================================
 // COMMAND REGISTRATION
 // ============================================================================
@@ -162,4 +268,6 @@ void FUnrealMCPStateTreeCommands::RegisterCommands(FMCPCommandRegistry& Registry
         [this](const TSharedPtr<FJsonObject>& P) { return HandleCommand(TEXT("omni.statetree.create_asset"), P); });
     Registry.RegisterCommand(TEXT("omni.statetree.list_assets"),
         [this](const TSharedPtr<FJsonObject>& P) { return HandleCommand(TEXT("omni.statetree.list_assets"), P); });
+    Registry.RegisterCommand(TEXT("omni.statetree.add_state"),
+        [this](const TSharedPtr<FJsonObject>& P) { return HandleCommand(TEXT("omni.statetree.add_state"), P); });
 }

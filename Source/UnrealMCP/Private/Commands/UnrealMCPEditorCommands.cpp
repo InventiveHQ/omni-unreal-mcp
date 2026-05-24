@@ -144,22 +144,31 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleFindActorsByName(const T
     {
         return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'pattern' parameter"));
     }
-    
+
+    // GWorld is null or wrong outside PIE — editor actors live in the editor world.
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : GWorld;
+    if (!World)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("No editor world available"));
+    }
+
     TArray<AActor*> AllActors;
-    UGameplayStatics::GetAllActorsOfClass(GWorld, AActor::StaticClass(), AllActors);
-    
+    UGameplayStatics::GetAllActorsOfClass(World, AActor::StaticClass(), AllActors);
+
     TArray<TSharedPtr<FJsonValue>> MatchingActors;
     for (AActor* Actor : AllActors)
     {
-        if (Actor && Actor->GetName().Contains(Pattern))
+        if (!Actor) { continue; }
+        // Match against both the internal name and the user-facing label,
+        // since callers usually search for what they see in the outliner.
+        if (Actor->GetName().Contains(Pattern) || Actor->GetActorLabel().Contains(Pattern))
         {
             MatchingActors.Add(FUnrealMCPCommonUtils::ActorToJson(Actor));
         }
     }
-    
+
     TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
     ResultObj->SetArrayField(TEXT("actors"), MatchingActors);
-    
     return ResultObj;
 }
 
