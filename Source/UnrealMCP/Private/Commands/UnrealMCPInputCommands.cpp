@@ -16,6 +16,7 @@
 #include "Widgets/SWindow.h"
 #include "Async/Async.h"
 
+#if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <Windows.h>
 #include "Windows/HideWindowsPlatformTypes.h"
@@ -23,6 +24,7 @@
 #ifndef PW_RENDERFULLCONTENT
 #define PW_RENDERFULLCONTENT 0x00000002
 #endif
+#endif // PLATFORM_WINDOWS
 
 FUnrealMCPInputCommands::FUnrealMCPInputCommands()
 {
@@ -180,6 +182,12 @@ TSharedPtr<FJsonObject> FUnrealMCPInputCommands::HandleIsPIEActive(const TShared
 
 TSharedPtr<FJsonObject> FUnrealMCPInputCommands::HandleTakeGameScreenshot(const TSharedPtr<FJsonObject>& Params)
 {
+#if !PLATFORM_WINDOWS
+	// PrintWindow/BitBlt is Win32 GDI; not available on macOS/Linux.
+	// Use the editor screenshot path (take_editor_screenshot) instead.
+	return FUnrealMCPCommonUtils::CreateErrorResponse(
+		TEXT("take_game_screenshot is Windows-only. Use take_editor_screenshot on macOS/Linux."));
+#else
 	FString FilePath;
 	if (!Params->TryGetStringField(TEXT("filepath"), FilePath))
 	{
@@ -295,6 +303,7 @@ TSharedPtr<FJsonObject> FUnrealMCPInputCommands::HandleTakeGameScreenshot(const 
 	Result->SetNumberField(TEXT("width"), Width);
 	Result->SetNumberField(TEXT("height"), Height);
 	return Result;
+#endif // PLATFORM_WINDOWS
 }
 
 // ============================================================================
@@ -472,7 +481,15 @@ TSharedPtr<FJsonObject> FUnrealMCPInputCommands::HandleSimulateMouseMove(const T
 		return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'x' and/or 'y' parameters"));
 	}
 
+#if PLATFORM_WINDOWS
 	::SetCursorPos(static_cast<int>(X), static_cast<int>(Y));
+#else
+	// macOS/Linux: simulating real OS cursor movement requires CGEventCreateMouseEvent /
+	// XTest. Not implemented yet — call simulate_widget_click or use take_editor_screenshot
+	// + click-by-widget-name workflows instead.
+	return FUnrealMCPCommonUtils::CreateErrorResponse(
+		TEXT("simulate_mouse_move is Windows-only at present. Use simulate_widget_click on macOS/Linux."));
+#endif
 
 	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
 	Result->SetBoolField(TEXT("success"), true);

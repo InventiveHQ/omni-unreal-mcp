@@ -17,7 +17,10 @@
 #include "Landscape.h"
 #include "LandscapeProxy.h"
 #include "LandscapeInfo.h"
-#include "LandscapeEditorSubsystem.h"
+// NOTE: UE 5.7 has no ULandscapeEditorSubsystem — heightmap import in code
+// goes through FLandscapeImportHelper + ULandscapeEdit (low-level). Wiring
+// that up properly is a follow-up; for now this handler validates inputs
+// and reports the manual-fallback step to the caller. See ROADMAP.md.
 #endif
 
 namespace
@@ -134,35 +137,20 @@ TSharedPtr<FJsonObject> FUnrealMCPTerrainCommands::HandleImportHeightmapPNG(cons
                 : *FString::Printf(TEXT("No Landscape actor named '%s'"), *LandscapeLabel));
     }
 
-    // The most reliable cross-version path is the LandscapeEditorSubsystem,
-    // which wraps the editor import pipeline. Calling its public method
-    // keeps us insulated from internal ALandscape::Import signature shifts.
-    ULandscapeEditorSubsystem* LandscapeSub = GEditor ? GEditor->GetEditorSubsystem<ULandscapeEditorSubsystem>() : nullptr;
-    if (!LandscapeSub)
-    {
-        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("LandscapeEditorSubsystem unavailable"));
-    }
-
-    // Many UE 5.x revisions accept a file path here; verify against your build
-    // if this signature has drifted. Returns true on success.
-    const bool bOk = LandscapeSub->ImportHeightmapFromFile(Landscape, PngPath);
-
-    Landscape->Modify();
-    Landscape->MarkPackageDirty();
-
+    // UE 5.7 has no public ULandscapeEditorSubsystem::ImportHeightmapFromFile
+    // shortcut. Programmatic application requires FLandscapeImportHelper +
+    // ULandscapeEdit (multi-step, version-sensitive). Returning a structured
+    // response so the caller can do the import manually via the editor.
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetBoolField(TEXT("success"), bOk);
+    Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(TEXT("png_path"), PngPath);
     Result->SetStringField(TEXT("landscape_actor"), Landscape->GetActorLabel());
     Result->SetNumberField(TEXT("heightmap_width"), W);
     Result->SetNumberField(TEXT("heightmap_height"), H);
-    if (!bOk)
-    {
-        Result->SetStringField(TEXT("note"),
-            TEXT("Import API returned false. The PNG decoded OK; the failure is in the "
-                 "landscape import step. Check editor log for details, or import manually "
-                 "via Landscape Mode > Manage > Import from File."));
-    }
+    Result->SetStringField(TEXT("note"),
+        TEXT("PNG decoded and target landscape found, but programmatic application "
+             "is not yet wired. Manual step: Landscape Mode > Manage > Import "
+             "from File > select the PNG. Tracked in ROADMAP.md (Phase 2.4 follow-up)."));
     return Result;
 #endif // WITH_EDITOR
 }
