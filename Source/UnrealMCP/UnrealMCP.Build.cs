@@ -92,6 +92,8 @@ public class UnrealMCP : ModuleRules
 					// Landscape modules (omni-unreal-mcp Phase 2.4)
 					"Landscape",
 					"LandscapeEditor",
+					// PythonScriptPlugin (Phase 3.1) — drives execute_python_code
+					"PythonScriptPlugin",
 				}
 			);
 

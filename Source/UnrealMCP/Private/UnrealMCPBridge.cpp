@@ -298,6 +298,7 @@ UUnrealMCPBridge::UUnrealMCPBridge()
     DataTableCommands = MakeShared<FUnrealMCPDataTableCommands>();
     StateTreeCommands = MakeShared<FUnrealMCPStateTreeCommands>();
     TerrainCommands = MakeShared<FUnrealMCPTerrainCommands>();
+    PythonCommands = MakeShared<FUnrealMCPPythonCommands>();
 }
 
 UUnrealMCPBridge::~UUnrealMCPBridge()
@@ -326,6 +327,7 @@ UUnrealMCPBridge::~UUnrealMCPBridge()
     DataTableCommands.Reset();
     StateTreeCommands.Reset();
     TerrainCommands.Reset();
+    PythonCommands.Reset();
 }
 
 // Initialize subsystem
@@ -489,6 +491,7 @@ void UUnrealMCPBridge::RegisterAllCommands()
     DataTableCommands->RegisterCommands(Registry);
     StateTreeCommands->RegisterCommands(Registry);
     TerrainCommands->RegisterCommands(Registry);
+    PythonCommands->RegisterCommands(Registry);
 
     UE_LOG(LogTemp, Display, TEXT("UnrealMCPBridge: Registered %d commands"), Registry.GetRegisteredCommands().Num());
 }

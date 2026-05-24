@@ -327,6 +327,11 @@ from tools.omni_gameplay_tag_tools import register_omni_gameplay_tag_tools
 from tools.omni_datatable_tools import register_omni_datatable_tools
 from tools.omni_statetree_tools import register_omni_statetree_tools
 from tools.omni_terrain_tools import register_omni_terrain_tools
+from tools.omni_python_tools import register_omni_python_tools
+from tools.omni_logs_tools import register_omni_logs_tools
+from tools.omni_asset_mgmt_tools import register_omni_asset_mgmt_tools
+from tools.omni_research_tools import register_omni_research_tools
+from tools.omni_skills_tools import register_omni_skills_tools
 
 MODULE_REGISTRY = {
     "editor":                register_editor_tools,
@@ -367,6 +372,12 @@ MODULE_REGISTRY = {
     "omni_datatable":        register_omni_datatable_tools,
     "omni_statetree":        register_omni_statetree_tools,
     "omni_terrain":          register_omni_terrain_tools,
+    # Phase 3: VibeUE-parity meta-tools
+    "omni_python":           register_omni_python_tools,   # execute_python_code + discovery
+    "omni_logs":             register_omni_logs_tools,     # read_logs
+    "omni_asset_mgmt":       register_omni_asset_mgmt_tools, # manage_asset (consolidated)
+    "omni_research":         register_omni_research_tools, # deep_research (web + geocode)
+    "omni_skills":           register_omni_skills_tools,   # manage_skills (lazy md loader)
 }
 
 # Sub-modules that are covered by their parent (e.g. "widget" loads all widget_* sub-modules).

@@ -32,6 +32,7 @@
 #include "Commands/UnrealMCPDataTableCommands.h"
 #include "Commands/UnrealMCPStateTreeCommands.h"
 #include "Commands/UnrealMCPTerrainCommands.h"
+#include "Commands/UnrealMCPPythonCommands.h"
 #include "UnrealMCPBridge.generated.h"
 
 class FMCPServerRunnable;
@@ -102,4 +103,5 @@ private:
 	TSharedPtr<FUnrealMCPDataTableCommands> DataTableCommands;
 	TSharedPtr<FUnrealMCPStateTreeCommands> StateTreeCommands;
 	TSharedPtr<FUnrealMCPTerrainCommands> TerrainCommands;
+	TSharedPtr<FUnrealMCPPythonCommands> PythonCommands;
 };
