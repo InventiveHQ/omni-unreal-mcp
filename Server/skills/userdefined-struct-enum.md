@@ -12,28 +12,19 @@ Create designer-editable enums and structs as content assets — no C++ recompil
 
 `UENUM` / `USTRUCT` in C++ require a code rebuild to add an entry or field. `UUserDefinedEnum` / `UUserDefinedStruct` live as `/Game/...` assets and edit live in the editor — pick these when iteration speed matters more than runtime polish.
 
-## Status — content seeding is currently a manual step
-
-`StructureEditorUtils` and `EnumEditorUtils` (the C++ helpers that mutate
-struct fields / enum entries) are editor-only and not bound to Python in
-UE 5.x. Until a Phase 4.1 C++ binding lands:
-
-- `enum_create()` works for creating the empty asset; if you pass `entries`,
-  the response includes `manual_step_required: true` and `pending_entries`
-  listing what you wanted seeded — paste those into the editor.
-- `struct_create()` works for creating the empty asset.
-- `enum_add_entry()` / `struct_add_variable()` return `manual_step_required`
-  with the requested name in the response, so the AI can prompt the
-  designer to add it in the editor.
-
 ## Tools
 
-- `enum_create(asset_path, entries)` — creates the asset; seeding returns manual_step_required
-- `enum_add_entry(asset_path, entry_name)` — manual_step_required for now
-- `struct_create(asset_path)` — creates the asset
-- `struct_add_variable(asset_path, var_name, var_type)` — manual_step_required for now
+Asset creation runs from Python (`unreal.AssetTools.create_asset`). Content
+seeding (struct vars, enum entries) routes to C++ via `omni.struct.*` /
+`omni.enum.*` commands in `FUnrealMCPStructEnumCommands` because
+`FStructureEditorUtils` / `FEnumEditorUtils` aren't bound to Python in UE 5.x.
 
-`var_type` accepts: `bool`, `int`, `float`, `double`, `string`, `name`, `text`, `vector`, `rotator`, `transform`.
+- `enum_create(asset_path, entries)` — create + optionally seed entries
+- `enum_add_entry(asset_path, entry_name)` — append one entry later
+- `struct_create(asset_path)` — create an empty struct
+- `struct_add_variable(asset_path, var_name, var_type)` — append a field
+
+`var_type` accepts: `bool`, `int`, `int64`, `float`, `double`, `string`, `name`, `text`, `vector`, `rotator`, `transform`. For struct/enum refs, pass the full asset path (e.g. `/Game/Combat/E_AmmoType.E_AmmoType`).
 
 ## Example — ammo enum + damage result struct
 

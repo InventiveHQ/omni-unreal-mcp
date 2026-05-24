@@ -1,37 +1,25 @@
 """
 Omni SkeletalMesh Tools — socket and skeleton-asset operations.
 
-Sockets are used to mount weapons, effects, attachment points on a tank
-turret or soldier hand. Sockets live on USkeleton, not USkeletalMesh.
-
-NOTE: USkeleton::Sockets is a protected UPROPERTY in C++ and is not writable
-from Python, and USkeletalMeshSocket::SocketName is exposed read-only.
-Adding/removing sockets requires either the editor UI or a small C++ binding
-(planned Phase 4.1). Until that ships, the add/remove tools return
-``manual_step_required`` instead of pretending to succeed.
+Phase 4.1: C++ handler ships in FUnrealMCPSkelMeshCommands. The Python
+wrappers now route to omni.skelmesh.{add_socket,list_sockets,remove_socket}.
 """
 
 import logging
-import textwrap
 from typing import Dict, Any, List
 from mcp.server.fastmcp import FastMCP, Context
-
-_MANUAL_SOCKET_STEP = (
-    "USkeleton.Sockets is a protected UPROPERTY and SocketName is read-only "
-    "in Python. Open the skeleton in the editor and add the socket manually, "
-    "or wait for the Phase 4.1 C++ binding."
-)
 
 logger = logging.getLogger("UnrealMCP")
 
 
-def _run_python(ctx: Context, script: str) -> Dict[str, Any]:
+def _send(ctx: Context, name: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Send a command to the UE C++ bridge and return the unwrapped result."""
     from unreal_mcp_server import get_unreal_connection
     try:
         unreal = get_unreal_connection()
         if not unreal:
             return {"success": False, "error": "Unreal Engine not connected"}
-        response = unreal.send_command("omni.python.execute", {"code": script, "mode": "ExecuteFile"})
+        response = unreal.send_command(name, params)
         return (response or {}).get("result", response or {"success": False, "error": "No response"})
     except Exception as e:
         logger.error(f"skelmesh tool failed: {e}")
@@ -39,7 +27,7 @@ def _run_python(ctx: Context, script: str) -> Dict[str, Any]:
 
 
 def register_omni_skelmesh_tools(mcp: FastMCP):
-    """Register skeleton/skeletal-mesh socket tools."""
+    """Register skeleton socket tools backed by FUnrealMCPSkelMeshCommands."""
 
     @mcp.tool()
     def skelmesh_add_socket(
@@ -61,38 +49,24 @@ def register_omni_skelmesh_tools(mcp: FastMCP):
             relative_rotation: [pitch,yaw,roll] in bone-local space.
             relative_scale: [x,y,z] scale.
         """
-        return {
-            "success": False,
-            "manual_step_required": True,
-            "reason": _MANUAL_SOCKET_STEP,
-            "requested": {
-                "skeleton": skeleton_path,
-                "socket": socket_name,
-                "bone": parent_bone,
-            },
-        }
+        return _send(ctx, "omni.skelmesh.add_socket", {
+            "skeleton_path": skeleton_path,
+            "socket_name": socket_name,
+            "parent_bone": parent_bone,
+            "relative_location": list(relative_location),
+            "relative_rotation": list(relative_rotation),
+            "relative_scale": list(relative_scale),
+        })
 
     @mcp.tool()
     def skelmesh_list_sockets(ctx: Context, skeleton_path: str) -> Dict[str, Any]:
-        """List sockets on a USkeleton with name + parent bone + offset.
-        Currently blocked: USkeleton.Sockets is a protected UPROPERTY and isn't
-        readable from Python. Returns manual_step_required until Phase 4.1.
-        """
-        return {
-            "success": False,
-            "manual_step_required": True,
-            "reason": _MANUAL_SOCKET_STEP,
-            "requested": {"skeleton": skeleton_path},
-        }
+        """List sockets on a USkeleton with name + parent bone + offset."""
+        return _send(ctx, "omni.skelmesh.list_sockets", {"skeleton_path": skeleton_path})
 
     @mcp.tool()
     def skelmesh_remove_socket(ctx: Context, skeleton_path: str, socket_name: str) -> Dict[str, Any]:
-        """Remove a socket by name from a USkeleton.
-        Currently blocked: same reason as skelmesh_add_socket.
-        """
-        return {
-            "success": False,
-            "manual_step_required": True,
-            "reason": _MANUAL_SOCKET_STEP,
-            "requested": {"skeleton": skeleton_path, "socket": socket_name},
-        }
+        """Remove a socket by name from a USkeleton."""
+        return _send(ctx, "omni.skelmesh.remove_socket", {
+            "skeleton_path": skeleton_path,
+            "socket_name": socket_name,
+        })

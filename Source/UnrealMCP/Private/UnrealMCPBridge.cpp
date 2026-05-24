@@ -299,6 +299,8 @@ UUnrealMCPBridge::UUnrealMCPBridge()
     StateTreeCommands = MakeShared<FUnrealMCPStateTreeCommands>();
     TerrainCommands = MakeShared<FUnrealMCPTerrainCommands>();
     PythonCommands = MakeShared<FUnrealMCPPythonCommands>();
+    SkelMeshCommands = MakeShared<FUnrealMCPSkelMeshCommands>();
+    StructEnumCommands = MakeShared<FUnrealMCPStructEnumCommands>();
 }
 
 UUnrealMCPBridge::~UUnrealMCPBridge()
@@ -328,6 +330,8 @@ UUnrealMCPBridge::~UUnrealMCPBridge()
     StateTreeCommands.Reset();
     TerrainCommands.Reset();
     PythonCommands.Reset();
+    SkelMeshCommands.Reset();
+    StructEnumCommands.Reset();
 }
 
 // Initialize subsystem
@@ -492,6 +496,8 @@ void UUnrealMCPBridge::RegisterAllCommands()
     StateTreeCommands->RegisterCommands(Registry);
     TerrainCommands->RegisterCommands(Registry);
     PythonCommands->RegisterCommands(Registry);
+    SkelMeshCommands->RegisterCommands(Registry);
+    StructEnumCommands->RegisterCommands(Registry);
 
     UE_LOG(LogTemp, Display, TEXT("UnrealMCPBridge: Registered %d commands"), Registry.GetRegisteredCommands().Num());
 }

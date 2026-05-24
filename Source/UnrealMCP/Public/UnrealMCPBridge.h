@@ -33,6 +33,8 @@
 #include "Commands/UnrealMCPStateTreeCommands.h"
 #include "Commands/UnrealMCPTerrainCommands.h"
 #include "Commands/UnrealMCPPythonCommands.h"
+#include "Commands/UnrealMCPSkelMeshCommands.h"
+#include "Commands/UnrealMCPStructEnumCommands.h"
 #include "UnrealMCPBridge.generated.h"
 
 class FMCPServerRunnable;
@@ -104,4 +106,6 @@ private:
 	TSharedPtr<FUnrealMCPStateTreeCommands> StateTreeCommands;
 	TSharedPtr<FUnrealMCPTerrainCommands> TerrainCommands;
 	TSharedPtr<FUnrealMCPPythonCommands> PythonCommands;
+	TSharedPtr<FUnrealMCPSkelMeshCommands> SkelMeshCommands;
+	TSharedPtr<FUnrealMCPStructEnumCommands> StructEnumCommands;
 };

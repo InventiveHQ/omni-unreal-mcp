@@ -1,27 +1,18 @@
 """
-Omni Struct + Enum Tools — UUserDefinedStruct / UUserDefinedEnum creation.
+Omni Struct + Enum Tools — UUserDefinedStruct / UUserDefinedEnum creation
+and content seeding.
 
-Editor-only assets. Use for game-config types (ammo, formation, morale state)
-that designers should be able to edit without recompiling C++.
-
-NOTE: Asset *creation* works from Python (empty struct, empty enum). Seeding
-contents (struct variables, enum entries) requires StructureEditorUtils /
-EnumEditorUtils, which are not bound to Python in UE 5.x. Until a Phase 4.1
-C++ binding lands, struct_add_variable / enum_add_entry / the seeded-entries
-branch of enum_create return ``manual_step_required`` instead of pretending
-to succeed.
+Asset creation (empty struct, empty enum) runs from Python via
+unreal.AssetTools.create_asset. Content seeding (adding variables to a
+struct, adding entries to an enum) routes to C++
+(FUnrealMCPStructEnumCommands) because StructureEditorUtils /
+EnumEditorUtils aren't bound to Python in UE 5.x.
 """
 
 import logging
 import textwrap
 from typing import Dict, Any, List
 from mcp.server.fastmcp import FastMCP, Context
-
-_MANUAL_EDITOR_UTILS_STEP = (
-    "StructureEditorUtils / EnumEditorUtils are editor-only C++ helpers not "
-    "bound to Python in UE 5.x. Open the asset in the editor to add variables/"
-    "entries, or wait for the Phase 4.1 C++ binding."
-)
 
 logger = logging.getLogger("UnrealMCP")
 
@@ -36,6 +27,19 @@ def _run_python(ctx: Context, script: str) -> Dict[str, Any]:
         return (response or {}).get("result", response or {"success": False, "error": "No response"})
     except Exception as e:
         logger.error(f"struct/enum tool failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _send(ctx: Context, name: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    from unreal_mcp_server import get_unreal_connection
+    try:
+        unreal = get_unreal_connection()
+        if not unreal:
+            return {"success": False, "error": "Unreal Engine not connected"}
+        response = unreal.send_command(name, params)
+        return (response or {}).get("result", response or {"success": False, "error": "No response"})
+    except Exception as e:
+        logger.error(f"struct/enum command failed: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -75,17 +79,16 @@ def register_omni_struct_enum_tools(mcp: FastMCP):
 
         Args:
             asset_path: Struct asset path.
-            var_name: New variable name.
-            var_type: One of: bool, int, float, double, string, name, text,
-                      vector, rotator, transform. For class refs / structs,
-                      pass the full path (e.g. /Game/Foo/SomeAsset.SomeAsset).
+            var_name: New variable name (becomes the friendly display name).
+            var_type: One of: bool, int, int64, float, double, string, name, text,
+                      vector, rotator, transform. For enum/struct refs, pass the
+                      full asset path (e.g. /Game/Combat/E_AmmoType.E_AmmoType).
         """
-        return {
-            "success": False,
-            "manual_step_required": True,
-            "reason": _MANUAL_EDITOR_UTILS_STEP,
-            "requested": {"asset": asset_path, "variable": var_name, "type": var_type},
-        }
+        return _send(ctx, "omni.struct.add_variable", {
+            "asset_path": asset_path,
+            "var_name": var_name,
+            "var_type": var_type,
+        })
 
     @mcp.tool()
     def enum_create(
@@ -97,7 +100,7 @@ def register_omni_struct_enum_tools(mcp: FastMCP):
 
         Args:
             asset_path: Enum asset path (e.g. /Game/Combat/E_AmmoType).
-            entries: Optional initial entry names (e.g. ["HE", "AP", "HVAP", "HEAT"]).
+            entries: Optional initial entry display names (e.g. ["HE", "AP"]).
         """
         seeds = entries or []
         script = textwrap.dedent(f'''
@@ -117,10 +120,12 @@ def register_omni_struct_enum_tools(mcp: FastMCP):
         ''').strip()
         result = _run_python(ctx, script)
         if seeds and result.get("success"):
-            result["entries_added"] = 0
-            result["manual_step_required"] = True
-            result["reason"] = _MANUAL_EDITOR_UTILS_STEP
-            result["pending_entries"] = list(seeds)
+            seed_result = _send(ctx, "omni.enum.add_entries", {
+                "asset_path": asset_path,
+                "entries": list(seeds),
+            })
+            result["entries_added"] = len(seed_result.get("added", []))
+            result["entries_skipped"] = seed_result.get("skipped", [])
         return result
 
     @mcp.tool()
@@ -129,12 +134,8 @@ def register_omni_struct_enum_tools(mcp: FastMCP):
         asset_path: str,
         entry_name: str,
     ) -> Dict[str, Any]:
-        """Add a single entry to an existing UUserDefinedEnum.
-        Currently blocked — see module docstring.
-        """
-        return {
-            "success": False,
-            "manual_step_required": True,
-            "reason": _MANUAL_EDITOR_UTILS_STEP,
-            "requested": {"asset": asset_path, "entry": entry_name},
-        }
+        """Add a single entry to an existing UUserDefinedEnum."""
+        return _send(ctx, "omni.enum.add_entry", {
+            "asset_path": asset_path,
+            "entry_name": entry_name,
+        })
