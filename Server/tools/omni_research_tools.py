@@ -10,6 +10,7 @@ Pure-Python, key-less sources:
 import logging
 import html
 import re
+import ssl
 import urllib.parse
 import urllib.request
 from typing import Dict, Any, List, Optional
@@ -20,9 +21,19 @@ logger = logging.getLogger("UnrealMCP")
 USER_AGENT = "omni-unreal-mcp/0.1 (https://github.com/InventiveHQ/omni-unreal-mcp)"
 
 
+def _ssl_ctx() -> ssl.SSLContext:
+    """macOS Python venvs don't trust the system keychain — point urllib at
+    certifi's CA bundle when available, fall back to default otherwise."""
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
 def _http_get(url: str, accept: str = "*/*", timeout: int = 15) -> str:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    with urllib.request.urlopen(req, timeout=timeout, context=_ssl_ctx()) as resp:
         charset = resp.headers.get_content_charset() or "utf-8"
         return resp.read().decode(charset, errors="replace")
 

@@ -6,6 +6,7 @@ Pure-Python — no C++ handler required. Walks {project}/Saved/Logs/.
 
 import logging
 import os
+import platform
 import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -27,7 +28,21 @@ def _project_root() -> Path:
     return here.parents[4]
 
 
+def _project_name() -> str:
+    """The .uproject base name — UE uses this for the macOS log dir."""
+    for p in _project_root().glob("*.uproject"):
+        return p.stem
+    return "UnrealProject"
+
+
 def _logs_dir() -> Path:
+    """Return the dir UE actually writes logs to. macOS puts them under
+    ~/Library/Logs/Unreal Engine/{ProjectName}Editor; Windows/Linux use
+    {project}/Saved/Logs. Prefer whichever exists."""
+    if platform.system() == "Darwin":
+        mac = Path.home() / "Library" / "Logs" / "Unreal Engine" / f"{_project_name()}Editor"
+        if mac.exists():
+            return mac
     return _project_root() / "Saved" / "Logs"
 
 

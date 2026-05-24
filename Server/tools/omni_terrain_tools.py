@@ -26,10 +26,21 @@ your User-Agent).
 
 import logging
 import os
+import ssl
 from typing import Dict, Any, Optional
 from mcp.server.fastmcp import FastMCP, Context
 
 logger = logging.getLogger("UnrealMCP")
+
+
+def _ssl_ctx() -> ssl.SSLContext:
+    """macOS Python venvs don't trust the system keychain — point urllib at
+    certifi's CA bundle when available, fall back to default otherwise."""
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
 
 
 def register_omni_terrain_tools(mcp: FastMCP):
@@ -62,7 +73,7 @@ def register_omni_terrain_tools(mcp: FastMCP):
                 url,
                 headers={"User-Agent": "omni-unreal-mcp/0.1 (https://github.com/InventiveHQ/omni-unreal-mcp)"},
             )
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10, context=_ssl_ctx()) as resp:
                 data = json.loads(resp.read())
             if not data:
                 return {"success": False, "error": "No results"}
@@ -197,7 +208,7 @@ def register_omni_terrain_tools(mcp: FastMCP):
                     url = (f"https://s3.amazonaws.com/elevation-tiles-prod/terrarium/"
                            f"{zoom}/{tx}/{ty}.png")
                     req = urllib.request.Request(url, headers={"User-Agent": "omni-unreal-mcp/0.1"})
-                    with urllib.request.urlopen(req, timeout=20) as resp:
+                    with urllib.request.urlopen(req, timeout=20, context=_ssl_ctx()) as resp:
                         png_bytes = resp.read()
 
                     # Decode PNG (zlib + minimal IDAT walk). To avoid PIL dep,
