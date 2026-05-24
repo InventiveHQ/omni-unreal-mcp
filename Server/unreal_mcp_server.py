@@ -332,6 +332,16 @@ from tools.omni_logs_tools import register_omni_logs_tools
 from tools.omni_asset_mgmt_tools import register_omni_asset_mgmt_tools
 from tools.omni_research_tools import register_omni_research_tools
 from tools.omni_skills_tools import register_omni_skills_tools
+# Phase 4: nine domain-specific gap fillers
+from tools.omni_spline_tools import register_omni_spline_tools
+from tools.omni_skelmesh_tools import register_omni_skelmesh_tools
+from tools.omni_foliage_tools import register_omni_foliage_tools
+from tools.omni_landscape_paint_tools import register_omni_landscape_paint_tools
+from tools.omni_animbp_tools import register_omni_animbp_tools
+from tools.omni_dataasset_tools import register_omni_dataasset_tools
+from tools.omni_struct_enum_tools import register_omni_struct_enum_tools
+from tools.omni_soundcue_tools import register_omni_soundcue_tools
+from tools.omni_transaction_tools import register_omni_transaction_tools
 
 MODULE_REGISTRY = {
     "editor":                register_editor_tools,
@@ -378,6 +388,16 @@ MODULE_REGISTRY = {
     "omni_asset_mgmt":       register_omni_asset_mgmt_tools, # manage_asset (consolidated)
     "omni_research":         register_omni_research_tools, # deep_research (web + geocode)
     "omni_skills":           register_omni_skills_tools,   # manage_skills (lazy md loader)
+    # Phase 4: nine domain gap fillers (all Python-pure via execute_python)
+    "omni_spline":           register_omni_spline_tools,            # roads, rivers, paths
+    "omni_skelmesh":         register_omni_skelmesh_tools,          # skeleton sockets
+    "omni_foliage":          register_omni_foliage_tools,           # foliage types, scatter, wind
+    "omni_landscape_paint":  register_omni_landscape_paint_tools,   # layer infos, paint
+    "omni_animbp":           register_omni_animbp_tools,            # AnimBlueprint creation
+    "omni_dataasset":        register_omni_dataasset_tools,         # DataAsset creation
+    "omni_struct_enum":      register_omni_struct_enum_tools,       # UserDefinedStruct/Enum
+    "omni_soundcue":         register_omni_soundcue_tools,          # SoundCue creation
+    "omni_transaction":      register_omni_transaction_tools,       # editor transactions
 }
 
 # Sub-modules that are covered by their parent (e.g. "widget" loads all widget_* sub-modules).

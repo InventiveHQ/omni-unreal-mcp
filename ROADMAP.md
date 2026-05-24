@@ -36,15 +36,15 @@ work as fresh-implementation.
 | 🆕 **StateTree** | done (Phase 2.3) | fresh impl | `FUnrealMCPStateTreeCommands` registers `omni.statetree.{create_asset,list_assets}`. Uses `UAssetTools::CreateAsset` with `UStateTreeFactory` (resolved dynamically). Asset-level only — deeper state-graph editing is Phase 3 work. **Needs editor build to verify.** |
 | 🆕 **GameplayTags** | done (Phase 2.1) | fresh impl | C++ handler `FUnrealMCPGameplayTagCommands` registers `omni.gameplay_tag.{create,list,query}`. Uses `UGameplayTagsManager` + `IGameplayTagsEditorModule::AddNewGameplayTagToINI`. **Needs editor build to verify.** |
 | 🆕 **DataTables** | done (Phase 2.2) | fresh impl | `FUnrealMCPDataTableCommands` registers `omni.datatable.{create,add_row,import_csv}`. Uses `UAssetTools::CreateAsset` + `UDataTableFactory` + `FDataTableEditorUtils::AddRow`. **Needs editor build to verify.** |
-| ❌ **DataAssets** | medium | fresh impl | Often paired with DataTables. Not yet implemented. |
-| ❌ **Enum/Struct creation** | high | fresh impl | Editor-driven creation of `UUserDefinedEnum` / `UUserDefinedStruct`. Not yet implemented. |
-| ❌ **Landscape** | high | ChiR24/runreal | Dedicated landscape ops (heightmap import, material assignment, sections). Existing project has hand-rolled scripts; would replace. |
-| ❌ **Foliage** | high | ChiR24/runreal | Foliage type creation, scatter, wind ops. |
-| ❌ **Animation Blueprint** | medium | fresh impl | AnimBP node graph editing via `UAnimBlueprint` editor APIs. |
+| 🆕 **DataAssets** | done (Phase 4) | fresh impl | `omni_dataasset_tools.py` — `dataasset_create`, `dataasset_set_property`. Python-pure via `unreal.AssetTools.create_asset` + `UDataAssetFactory`. |
+| 🆕 **Enum/Struct creation** | done (Phase 4) | fresh impl | `omni_struct_enum_tools.py` — `struct_create`, `struct_add_variable`, `enum_create`, `enum_add_entry`. Python-pure via `StructureEditorUtils` / `EnumEditorUtils`. |
+| 🆕 **Landscape painting** | done (Phase 4) | fresh impl | `omni_landscape_paint_tools.py` — `landscape_list_layers`, `landscape_create_layer_info`, `landscape_assign_material`, `landscape_paint_uniform`. Complements the Phase 2.4 heightmap import. |
+| 🆕 **Foliage** | done (Phase 4) | fresh impl | `omni_foliage_tools.py` — `foliage_create_type`, `foliage_scatter`, `foliage_set_wind`, `foliage_list_types`, `foliage_clear_instances`. Replaces 7 of the hand-rolled `/scripts/` workarounds. |
+| 🆕 **Animation Blueprint** | done (Phase 4 — minimal) | fresh impl | `omni_animbp_tools.py` — `animbp_create`, `animbp_list_for_skeleton`. AnimGraph node-editing deferred to Phase 5. |
 | ❌ **AnimSequence / AnimMontage / AnimEditing** | medium | fresh impl | Animation asset ops. |
-| ❌ **Skeleton** | medium | fresh impl | Skeleton asset queries / socket creation. |
-| ❌ **Sound Cues** | medium | fresh impl | Legacy audio asset support (MetaSound is the modern path). |
-| ❌ **Splines** | medium | fresh impl | Spline component editing, useful for rivers/roads (current project has `place_river.py`). |
+| 🆕 **Skeleton** | done (Phase 4) | fresh impl | `omni_skelmesh_tools.py` — `skelmesh_add_socket`, `skelmesh_list_sockets`, `skelmesh_remove_socket`. Sockets for weapon mounts on turrets / hands. |
+| 🆕 **Sound Cues** | done (Phase 4) | fresh impl | `omni_soundcue_tools.py` — `soundcue_create`, `soundcue_set_wave`. Python-pure via `USoundCueFactoryNew`. |
+| 🆕 **Splines** | done (Phase 4) | fresh impl | `omni_spline_tools.py` — `spline_create`, `spline_add_point`, `spline_get_info`. Spawns Actor with USplineComponent root, suitable for roads/rivers. |
 | 🆕 **Terrain Data (real-world heightmap)** | done (Phase 2.4) | fresh impl | Two-layer: Python (`omni_terrain_tools.py`) does geocoding (OSM Nominatim) + Mapbox Terrain-RGB fetching. C++ (`FUnrealMCPTerrainCommands`) imports the PNG onto a target Landscape via `ULandscapeEditorSubsystem::ImportHeightmapFromFile`. Commands: `omni.terrain.import_heightmap_png`, `omni.terrain.import_heightmap_from_coords`. **Needs editor build to verify.** |
 | ❌ **Screenshots** | medium | runreal | Editor viewport capture for visual regression. |
 | ❌ **Viewport control** | medium | runreal | Camera-in-editor positioning. |
@@ -52,7 +52,7 @@ work as fresh-implementation.
 | ❌ **Runtime Virtual Textures** | low | fresh impl | |
 | ❌ **PIE Testing** | medium | fresh impl | Programmatic Play-In-Editor start/stop, assertion hooks. |
 | ❌ **Engine Settings** | low | fresh impl | Engine-level config (vs project). |
-| ❌ **Editor Transactions** | medium | fresh impl | Wrap a block of ops in a single undo transaction. Important for clean editor history. |
+| 🆕 **Editor Transactions** | done (Phase 4) | fresh impl | `omni_transaction_tools.py` — `scoped_transaction(description, python_block)`. Wraps a Python block in a single `unreal.ScopedEditorTransaction`. |
 
 ### Panzer-Strike-specific composites (not in any upstream)
 
@@ -86,7 +86,9 @@ Phase 2.1 (shipped): GameplayTag C++ handler + duplicate cleanup.
 Phase 2.2 (shipped): DataTable C++ handler (RTS tank stats).
 Phase 2.3 (shipped): StateTree C++ handler (RTS unit AI — asset-level).
 Phase 2.4 (shipped): Terrain heightmap C++ handler (Python fetches Mapbox, C++ imports onto landscape).
-Phase 3 (next): DataAssets, Enum/Struct creation, Landscape paint/spline ops, Foliage dedicated handler.
+Phase 3 (shipped): Lazy-loading meta-tools — `execute_python_code` + 9 others (discovery, asset mgmt, logs, terrain data, research, skills, statetree state-add).
+Phase 4 (shipped): 9 domain gap fillers — DataAssets, Enum/Struct, Landscape paint, Foliage, Animation Blueprint (minimal), Skeleton sockets, Sound Cues, Splines, Editor Transactions. All Python-pure via `omni.python.execute` — no C++ rebuild required.
+Phase 5 (future): AnimGraph node editing, AnimMontage/Sequence asset ops, Viewport camera control, Screenshots, UV Mapping, RVTs, PIE testing harness.
 Phase 4: Animation suite + Sound Cues + UV mapping + PIE testing + Screenshots.
 Phase 5: StateTree deep editing (states, transitions, tasks beyond asset creation).
 Phase 6: Panzer-Strike composites (platoon spawning, move orders, faction setup).

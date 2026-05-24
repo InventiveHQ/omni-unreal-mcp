@@ -61,6 +61,15 @@ MODULE_CATEGORIES: dict[str, str] = {
     "omni_statetree":          "ai",
     "omni_gameplay_tag":       "gameplay",
     "omni_datatable":          "data",
+    "omni_spline":             "spline",
+    "omni_skelmesh":           "skeleton",
+    "omni_foliage":            "foliage",
+    "omni_landscape_paint":    "landscape",
+    "omni_animbp":             "animation",
+    "omni_dataasset":          "data",
+    "omni_struct_enum":        "data",
+    "omni_soundcue":           "audio",
+    "omni_transaction":        "editor",
 }
 
 
@@ -116,6 +125,24 @@ CORE_TOOLS: set[str] = {
     "read_logs",
     "terrain_data",
     "deep_research",
+
+    # Phase 4 — domain headline tools surfaced at top level
+    "spline_create",
+    "spline_add_point",
+    "skelmesh_add_socket",
+    "skelmesh_list_sockets",
+    "foliage_create_type",
+    "foliage_scatter",
+    "foliage_set_wind",
+    "landscape_list_layers",
+    "landscape_assign_material",
+    "landscape_paint_uniform",
+    "animbp_create",
+    "dataasset_create",
+    "struct_create",
+    "enum_create",
+    "soundcue_create",
+    "scoped_transaction",
 }
 
 
