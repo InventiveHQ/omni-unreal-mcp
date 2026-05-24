@@ -169,6 +169,32 @@ TSharedPtr<FJsonObject> FUnrealMCPTerrainCommands::HandleImportHeightmapPNG(cons
         return Resp;
     }
 
+    // Clear all edit layers first. Without this, lingering deltas from past
+    // brushes (e.g. WaterBrushManager flatten) will override our writes —
+    // SetHeightData targets the currently-active edit layer, but the visible
+    // landscape blends ALL layers, so a hidden flatten layer wins.
+    // bool clear = Params->TryGet... — default true; only skip when caller knows what they're doing.
+    bool bClearEditLayers = true;
+    Params->TryGetBoolField(TEXT("clear_edit_layers"), bClearEditLayers);
+    int32 ClearedLayers = 0;
+    if (bClearEditLayers)
+    {
+        // DeleteLayers() removes all edit layers; ToggleCanHaveLayersContent
+        // then switches off the layer system entirely so the base heightmap
+        // becomes the sole source. Both are needed because DeleteLayers alone
+        // leaves the layer system intact and a re-add could resurrect deltas.
+        const uint8 PreCount = Landscape->GetLayerCount();
+        Landscape->DeleteLayers();
+        ClearedLayers = PreCount - Landscape->GetLayerCount();
+        if (Landscape->CanHaveLayersContent())
+        {
+            Landscape->ToggleCanHaveLayersContent();
+        }
+        // After disabling layers, SetEditingLayer(FGuid()) makes SetHeightData
+        // write to the base heightmap directly.
+        Landscape->SetEditingLayer(FGuid());
+    }
+
     // SetHeightData expects the data origin at (X1,Y1) — match the landscape's
     // min coords so writes land on the correct vertex columns/rows.
     {
@@ -204,6 +230,7 @@ TSharedPtr<FJsonObject> FUnrealMCPTerrainCommands::HandleImportHeightmapPNG(cons
     Result->SetStringField(TEXT("landscape_actor"), Landscape->GetActorLabel());
     Result->SetNumberField(TEXT("heightmap_width"), W);
     Result->SetNumberField(TEXT("heightmap_height"), H);
+    Result->SetNumberField(TEXT("cleared_edit_layers"), ClearedLayers);
     Result->SetNumberField(TEXT("landscape_min_x"), Extent.Min.X);
     Result->SetNumberField(TEXT("landscape_min_y"), Extent.Min.Y);
     Result->SetNumberField(TEXT("landscape_max_x"), Extent.Max.X);
