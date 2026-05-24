@@ -65,10 +65,14 @@ def register_editor_tools(mcp: FastMCP):
             response = unreal.send_command("find_actors_by_name", {
                 "pattern": pattern
             })
-            
+
             if not response:
                 return []
-                
+
+            # The bridge wraps every response as {status, result}; the actor
+            # array lives inside result.actors, not at the top level.
+            if "result" in response and isinstance(response["result"], dict):
+                return response["result"].get("actors", [])
             return response.get("actors", [])
             
         except Exception as e:
