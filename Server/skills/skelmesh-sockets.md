@@ -13,11 +13,19 @@ Add named attachment points on a `USkeleton` for mounting weapons, VFX, or IK ta
 
 Sockets live on the `USkeleton` asset, not the `USkeletalMesh`. Pass the skeleton path (e.g. `/Game/Tanks/Tiger/SK_Tiger_Skeleton`), not the mesh path. A socket added to a skeleton is available on every skeletal mesh that shares it.
 
+## Status — manual step currently required
+
+`USkeleton.Sockets` is a protected UPROPERTY and `USkeletalMeshSocket.SocketName`
+is exposed read-only in UE 5.x Python. The MCP tools below will return
+`{"success": false, "manual_step_required": true}` until a Phase 4.1 C++
+binding lands. Until then, open the skeleton in the editor (Skeleton tab →
+right-click bone → Add Socket) and use the example below as a record of intent.
+
 ## Tools
 
-- `skelmesh_add_socket(skeleton_path, socket_name, parent_bone, relative_location, relative_rotation, relative_scale)`
-- `skelmesh_list_sockets(skeleton_path)` — inventory existing sockets with name, bone, offset
-- `skelmesh_remove_socket(skeleton_path, socket_name)`
+- `skelmesh_add_socket(skeleton_path, socket_name, parent_bone, relative_location, relative_rotation, relative_scale)` — blocked, returns manual_step_required
+- `skelmesh_list_sockets(skeleton_path)` — blocked, returns manual_step_required
+- `skelmesh_remove_socket(skeleton_path, socket_name)` — blocked, returns manual_step_required
 
 ## Workflow
 

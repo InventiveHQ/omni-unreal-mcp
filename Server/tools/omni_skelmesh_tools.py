@@ -3,12 +3,24 @@ Omni SkeletalMesh Tools — socket and skeleton-asset operations.
 
 Sockets are used to mount weapons, effects, attachment points on a tank
 turret or soldier hand. Sockets live on USkeleton, not USkeletalMesh.
+
+NOTE: USkeleton::Sockets is a protected UPROPERTY in C++ and is not writable
+from Python, and USkeletalMeshSocket::SocketName is exposed read-only.
+Adding/removing sockets requires either the editor UI or a small C++ binding
+(planned Phase 4.1). Until that ships, the add/remove tools return
+``manual_step_required`` instead of pretending to succeed.
 """
 
 import logging
 import textwrap
 from typing import Dict, Any, List
 from mcp.server.fastmcp import FastMCP, Context
+
+_MANUAL_SOCKET_STEP = (
+    "USkeleton.Sockets is a protected UPROPERTY and SocketName is read-only "
+    "in Python. Open the skeleton in the editor and add the socket manually, "
+    "or wait for the Phase 4.1 C++ binding."
+)
 
 logger = logging.getLogger("UnrealMCP")
 
@@ -49,79 +61,38 @@ def register_omni_skelmesh_tools(mcp: FastMCP):
             relative_rotation: [pitch,yaw,roll] in bone-local space.
             relative_scale: [x,y,z] scale.
         """
-        script = textwrap.dedent(f'''
-            import unreal, json
-            skeleton_path = {skeleton_path!r}
-            socket_name = {socket_name!r}
-            parent_bone = {parent_bone!r}
-            loc = {list(relative_location)!r}
-            rot = {list(relative_rotation)!r}
-            scl = {list(relative_scale)!r}
-
-            skel = unreal.load_asset(skeleton_path)
-            if not isinstance(skel, unreal.Skeleton):
-                print(json.dumps({{"success": False, "error": "Not a USkeleton"}}))
-            else:
-                socket = unreal.SkeletalMeshSocket(skel)
-                socket.socket_name = socket_name
-                socket.bone_name = parent_bone
-                socket.relative_location = unreal.Vector(*loc)
-                socket.relative_rotation = unreal.Rotator(*rot)
-                socket.relative_scale = unreal.Vector(*scl)
-                sockets = list(skel.sockets) if skel.sockets else []
-                sockets.append(socket)
-                skel.sockets = sockets
-                unreal.EditorAssetLibrary.save_asset(skeleton_path, only_if_is_dirty=False)
-                print(json.dumps({{
-                    "success": True,
-                    "socket": socket_name,
-                    "bone": parent_bone,
-                    "skeleton": skeleton_path,
-                }}))
-        ''').strip()
-        return _run_python(ctx, script)
+        return {
+            "success": False,
+            "manual_step_required": True,
+            "reason": _MANUAL_SOCKET_STEP,
+            "requested": {
+                "skeleton": skeleton_path,
+                "socket": socket_name,
+                "bone": parent_bone,
+            },
+        }
 
     @mcp.tool()
     def skelmesh_list_sockets(ctx: Context, skeleton_path: str) -> Dict[str, Any]:
-        """List sockets on a USkeleton with name + parent bone + offset."""
-        script = textwrap.dedent(f'''
-            import unreal, json
-            skeleton_path = {skeleton_path!r}
-            skel = unreal.load_asset(skeleton_path)
-            if not isinstance(skel, unreal.Skeleton):
-                print(json.dumps({{"success": False, "error": "Not a USkeleton"}}))
-            else:
-                out = []
-                for s in (skel.sockets or []):
-                    loc = s.relative_location
-                    out.append({{
-                        "name": str(s.socket_name),
-                        "bone": str(s.bone_name),
-                        "location": [loc.x, loc.y, loc.z],
-                    }})
-                print(json.dumps({{"success": True, "count": len(out), "sockets": out}}))
-        ''').strip()
-        return _run_python(ctx, script)
+        """List sockets on a USkeleton with name + parent bone + offset.
+        Currently blocked: USkeleton.Sockets is a protected UPROPERTY and isn't
+        readable from Python. Returns manual_step_required until Phase 4.1.
+        """
+        return {
+            "success": False,
+            "manual_step_required": True,
+            "reason": _MANUAL_SOCKET_STEP,
+            "requested": {"skeleton": skeleton_path},
+        }
 
     @mcp.tool()
     def skelmesh_remove_socket(ctx: Context, skeleton_path: str, socket_name: str) -> Dict[str, Any]:
-        """Remove a socket by name from a USkeleton."""
-        script = textwrap.dedent(f'''
-            import unreal, json
-            skeleton_path = {skeleton_path!r}
-            socket_name = {socket_name!r}
-            skel = unreal.load_asset(skeleton_path)
-            if not isinstance(skel, unreal.Skeleton):
-                print(json.dumps({{"success": False, "error": "Not a USkeleton"}}))
-            else:
-                before = len(skel.sockets or [])
-                skel.sockets = [s for s in (skel.sockets or []) if str(s.socket_name) != socket_name]
-                after = len(skel.sockets or [])
-                unreal.EditorAssetLibrary.save_asset(skeleton_path, only_if_is_dirty=False)
-                print(json.dumps({{
-                    "success": True,
-                    "removed": before - after,
-                    "remaining": after,
-                }}))
-        ''').strip()
-        return _run_python(ctx, script)
+        """Remove a socket by name from a USkeleton.
+        Currently blocked: same reason as skelmesh_add_socket.
+        """
+        return {
+            "success": False,
+            "manual_step_required": True,
+            "reason": _MANUAL_SOCKET_STEP,
+            "requested": {"skeleton": skeleton_path, "socket": socket_name},
+        }

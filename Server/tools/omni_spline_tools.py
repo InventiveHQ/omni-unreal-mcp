@@ -71,7 +71,7 @@ def register_omni_spline_tools(mcp: FastMCP):
             spline.set_closed_loop(closed)
             spline.clear_spline_points(False)
             for p in points:
-                spline.add_spline_world_point(unreal.Vector(*p), True)
+                spline.add_spline_point(unreal.Vector(*p), unreal.SplineCoordinateSpace.WORLD)
             spline.update_spline()
 
             print(json.dumps({{
@@ -107,7 +107,9 @@ def register_omni_spline_tools(mcp: FastMCP):
                 if not spline:
                     print(json.dumps({{"success": False, "error": "Actor has no SplineComponent"}}))
                 else:
-                    spline.add_spline_world_point(unreal.Vector(*world_point), update)
+                    spline.add_spline_point(unreal.Vector(*world_point), unreal.SplineCoordinateSpace.WORLD)
+                    if update:
+                        spline.update_spline()
                     print(json.dumps({{
                         "success": True,
                         "actor": actor_name,

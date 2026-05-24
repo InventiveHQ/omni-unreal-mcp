@@ -37,12 +37,12 @@ work as fresh-implementation.
 | 🆕 **GameplayTags** | done (Phase 2.1) | fresh impl | C++ handler `FUnrealMCPGameplayTagCommands` registers `omni.gameplay_tag.{create,list,query}`. Uses `UGameplayTagsManager` + `IGameplayTagsEditorModule::AddNewGameplayTagToINI`. **Needs editor build to verify.** |
 | 🆕 **DataTables** | done (Phase 2.2) | fresh impl | `FUnrealMCPDataTableCommands` registers `omni.datatable.{create,add_row,import_csv}`. Uses `UAssetTools::CreateAsset` + `UDataTableFactory` + `FDataTableEditorUtils::AddRow`. **Needs editor build to verify.** |
 | 🆕 **DataAssets** | done (Phase 4) | fresh impl | `omni_dataasset_tools.py` — `dataasset_create`, `dataasset_set_property`. Python-pure via `unreal.AssetTools.create_asset` + `UDataAssetFactory`. |
-| 🆕 **Enum/Struct creation** | done (Phase 4) | fresh impl | `omni_struct_enum_tools.py` — `struct_create`, `struct_add_variable`, `enum_create`, `enum_add_entry`. Python-pure via `StructureEditorUtils` / `EnumEditorUtils`. |
+| 🟡 **Enum/Struct creation** | partial (Phase 4 / Phase 4.1) | fresh impl | `omni_struct_enum_tools.py` — `struct_create` and empty `enum_create` work from Python. Seeding content (`struct_add_variable`, `enum_add_entry`, seeded `enum_create.entries`) returns `manual_step_required` — `StructureEditorUtils` / `EnumEditorUtils` aren't bound to Python in UE 5.x. Phase 4.1 ships the C++ binding. |
 | 🆕 **Landscape painting** | done (Phase 4) | fresh impl | `omni_landscape_paint_tools.py` — `landscape_list_layers`, `landscape_create_layer_info`, `landscape_assign_material`, `landscape_paint_uniform`. Complements the Phase 2.4 heightmap import. |
 | 🆕 **Foliage** | done (Phase 4) | fresh impl | `omni_foliage_tools.py` — `foliage_create_type`, `foliage_scatter`, `foliage_set_wind`, `foliage_list_types`, `foliage_clear_instances`. Replaces 7 of the hand-rolled `/scripts/` workarounds. |
 | 🆕 **Animation Blueprint** | done (Phase 4 — minimal) | fresh impl | `omni_animbp_tools.py` — `animbp_create`, `animbp_list_for_skeleton`. AnimGraph node-editing deferred to Phase 5. |
 | ❌ **AnimSequence / AnimMontage / AnimEditing** | medium | fresh impl | Animation asset ops. |
-| 🆕 **Skeleton** | done (Phase 4) | fresh impl | `omni_skelmesh_tools.py` — `skelmesh_add_socket`, `skelmesh_list_sockets`, `skelmesh_remove_socket`. Sockets for weapon mounts on turrets / hands. |
+| 🟡 **Skeleton** | partial (Phase 4 / Phase 4.1) | fresh impl | `omni_skelmesh_tools.py` — all 3 socket tools return `manual_step_required`. `USkeleton.Sockets` is a protected UPROPERTY and `USkeletalMeshSocket.SocketName` is read-only in UE 5.x Python. Phase 4.1 ships a C++ binding (`omni.skelmesh.add_socket` etc.) that mutates the skeleton directly. |
 | 🆕 **Sound Cues** | done (Phase 4) | fresh impl | `omni_soundcue_tools.py` — `soundcue_create`, `soundcue_set_wave`. Python-pure via `USoundCueFactoryNew`. |
 | 🆕 **Splines** | done (Phase 4) | fresh impl | `omni_spline_tools.py` — `spline_create`, `spline_add_point`, `spline_get_info`. Spawns Actor with USplineComponent root, suitable for roads/rivers. |
 | 🆕 **Terrain Data (real-world heightmap)** | done (Phase 2.4) | fresh impl | Two-layer: Python (`omni_terrain_tools.py`) does geocoding (OSM Nominatim) + Mapbox Terrain-RGB fetching. C++ (`FUnrealMCPTerrainCommands`) imports the PNG onto a target Landscape via `ULandscapeEditorSubsystem::ImportHeightmapFromFile`. Commands: `omni.terrain.import_heightmap_png`, `omni.terrain.import_heightmap_from_coords`. **Needs editor build to verify.** |
@@ -87,7 +87,11 @@ Phase 2.2 (shipped): DataTable C++ handler (RTS tank stats).
 Phase 2.3 (shipped): StateTree C++ handler (RTS unit AI — asset-level).
 Phase 2.4 (shipped): Terrain heightmap C++ handler (Python fetches Mapbox, C++ imports onto landscape).
 Phase 3 (shipped): Lazy-loading meta-tools — `execute_python_code` + 9 others (discovery, asset mgmt, logs, terrain data, research, skills, statetree state-add).
-Phase 4 (shipped): 9 domain gap fillers — DataAssets, Enum/Struct, Landscape paint, Foliage, Animation Blueprint (minimal), Skeleton sockets, Sound Cues, Splines, Editor Transactions. All Python-pure via `omni.python.execute` — no C++ rebuild required.
+Phase 4 (shipped): 9 domain gap fillers — DataAssets, Enum/Struct (partial: empty-asset only), Landscape paint, Foliage, Animation Blueprint (minimal), Skeleton sockets (blocked on Phase 4.1), Sound Cues, Splines, Editor Transactions. Mostly Python-pure via `omni.python.execute`.
+Phase 4.1 (next): C++ bindings for the two Phase-4 gaps that hit UE 5.x Python limits:
+  - `omni.skelmesh.{add,list,remove}_socket` — mutate `USkeleton::Sockets` directly (the UPROPERTY is protected from Python).
+  - `omni.struct.add_variable`, `omni.enum.add_entry`, `omni.enum.add_entries` — call `StructureEditorUtils::AddVariable` and `EnumEditorUtils::AddEnumeratorForUserDefinedEnum` (editor-only C++ helpers not bound to Python).
+  Each is a small C++ handler in `Source/UnrealMCP/Private/Commands/`; needs an editor rebuild to ship. Once landed, the existing Python tools swap their `manual_step_required` returns for real `send_command` calls.
 Phase 5 (future): AnimGraph node editing, AnimMontage/Sequence asset ops, Viewport camera control, Screenshots, UV Mapping, RVTs, PIE testing harness.
 Phase 4: Animation suite + Sound Cues + UV mapping + PIE testing + Screenshots.
 Phase 5: StateTree deep editing (states, transitions, tasks beyond asset creation).

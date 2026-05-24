@@ -3,12 +3,25 @@ Omni Struct + Enum Tools — UUserDefinedStruct / UUserDefinedEnum creation.
 
 Editor-only assets. Use for game-config types (ammo, formation, morale state)
 that designers should be able to edit without recompiling C++.
+
+NOTE: Asset *creation* works from Python (empty struct, empty enum). Seeding
+contents (struct variables, enum entries) requires StructureEditorUtils /
+EnumEditorUtils, which are not bound to Python in UE 5.x. Until a Phase 4.1
+C++ binding lands, struct_add_variable / enum_add_entry / the seeded-entries
+branch of enum_create return ``manual_step_required`` instead of pretending
+to succeed.
 """
 
 import logging
 import textwrap
 from typing import Dict, Any, List
 from mcp.server.fastmcp import FastMCP, Context
+
+_MANUAL_EDITOR_UTILS_STEP = (
+    "StructureEditorUtils / EnumEditorUtils are editor-only C++ helpers not "
+    "bound to Python in UE 5.x. Open the asset in the editor to add variables/"
+    "entries, or wait for the Phase 4.1 C++ binding."
+)
 
 logger = logging.getLogger("UnrealMCP")
 
@@ -67,38 +80,12 @@ def register_omni_struct_enum_tools(mcp: FastMCP):
                       vector, rotator, transform. For class refs / structs,
                       pass the full path (e.g. /Game/Foo/SomeAsset.SomeAsset).
         """
-        script = textwrap.dedent(f'''
-            import unreal, json
-            asset_path = {asset_path!r}
-            var_name = {var_name!r}
-            var_type = {var_type!r}
-
-            s = unreal.load_asset(asset_path)
-            if not isinstance(s, unreal.UserDefinedStruct):
-                print(json.dumps({{"success": False, "error": "Not a UserDefinedStruct"}}))
-            else:
-                pin_type_map = {{
-                    "bool": (unreal.EdGraphPinType(), "bool"),
-                    "int": (unreal.EdGraphPinType(), "int"),
-                    "float": (unreal.EdGraphPinType(), "real"),
-                    "double": (unreal.EdGraphPinType(), "real"),
-                    "string": (unreal.EdGraphPinType(), "string"),
-                    "name": (unreal.EdGraphPinType(), "name"),
-                    "text": (unreal.EdGraphPinType(), "text"),
-                    "vector": (unreal.EdGraphPinType(), "struct"),
-                    "rotator": (unreal.EdGraphPinType(), "struct"),
-                    "transform": (unreal.EdGraphPinType(), "struct"),
-                }}
-                pin_type, category = pin_type_map.get(var_type, (unreal.EdGraphPinType(), "real"))
-                pin_type.pin_category = category
-                try:
-                    unreal.StructureEditorUtils.add_variable(s, pin_type, var_name)
-                    unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
-                    print(json.dumps({{"success": True, "asset": asset_path, "variable": var_name, "type": var_type}}))
-                except Exception as e:
-                    print(json.dumps({{"success": False, "error": str(e)}}))
-        ''').strip()
-        return _run_python(ctx, script)
+        return {
+            "success": False,
+            "manual_step_required": True,
+            "reason": _MANUAL_EDITOR_UTILS_STEP,
+            "requested": {"asset": asset_path, "variable": var_name, "type": var_type},
+        }
 
     @mcp.tool()
     def enum_create(
@@ -116,7 +103,6 @@ def register_omni_struct_enum_tools(mcp: FastMCP):
         script = textwrap.dedent(f'''
             import unreal, json, os
             asset_path = {asset_path!r}
-            entries = {seeds!r}
 
             pkg_dir = os.path.dirname(asset_path) or "/Game"
             pkg_name = os.path.basename(asset_path)
@@ -126,17 +112,16 @@ def register_omni_struct_enum_tools(mcp: FastMCP):
             if not e:
                 print(json.dumps({{"success": False, "error": "create_asset returned None"}}))
             else:
-                added = 0
-                for name in entries:
-                    try:
-                        unreal.EnumEditorUtils.add_enumerator_for_user_defined_enum(e, name)
-                        added += 1
-                    except Exception:
-                        pass
                 unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
-                print(json.dumps({{"success": True, "asset": asset_path, "entries_added": added}}))
+                print(json.dumps({{"success": True, "asset": asset_path}}))
         ''').strip()
-        return _run_python(ctx, script)
+        result = _run_python(ctx, script)
+        if seeds and result.get("success"):
+            result["entries_added"] = 0
+            result["manual_step_required"] = True
+            result["reason"] = _MANUAL_EDITOR_UTILS_STEP
+            result["pending_entries"] = list(seeds)
+        return result
 
     @mcp.tool()
     def enum_add_entry(
@@ -144,20 +129,12 @@ def register_omni_struct_enum_tools(mcp: FastMCP):
         asset_path: str,
         entry_name: str,
     ) -> Dict[str, Any]:
-        """Add a single entry to an existing UUserDefinedEnum."""
-        script = textwrap.dedent(f'''
-            import unreal, json
-            asset_path = {asset_path!r}
-            entry = {entry_name!r}
-            e = unreal.load_asset(asset_path)
-            if not isinstance(e, unreal.UserDefinedEnum):
-                print(json.dumps({{"success": False, "error": "Not a UserDefinedEnum"}}))
-            else:
-                try:
-                    unreal.EnumEditorUtils.add_enumerator_for_user_defined_enum(e, entry)
-                    unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
-                    print(json.dumps({{"success": True, "asset": asset_path, "entry": entry}}))
-                except Exception as ex:
-                    print(json.dumps({{"success": False, "error": str(ex)}}))
-        ''').strip()
-        return _run_python(ctx, script)
+        """Add a single entry to an existing UUserDefinedEnum.
+        Currently blocked — see module docstring.
+        """
+        return {
+            "success": False,
+            "manual_step_required": True,
+            "reason": _MANUAL_EDITOR_UTILS_STEP,
+            "requested": {"asset": asset_path, "entry": entry_name},
+        }
