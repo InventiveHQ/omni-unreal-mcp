@@ -11,6 +11,7 @@
 #if WITH_EDITOR
 #include "StateTree.h"
 #include "StateTreeEditingSubsystem.h"
+#include "StateTreeFactory.h"
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
 #include "Factories/Factory.h"
@@ -69,15 +70,26 @@ TSharedPtr<FJsonObject> FUnrealMCPStateTreeCommands::HandleCreateAsset(const TSh
             FString::Printf(TEXT("Bad asset_path (expected /Game/Folder/Name): %s"), *AssetPath));
     }
 
-    // Look up the StateTree factory class by name to avoid a hard compile-time
-    // dependency on a specific factory header (which has moved between UE
-    // engine versions). If unavailable, fall back to a plain NewObject path.
-    UClass* FactoryClass = FindObject<UClass>(nullptr, TEXT("/Script/StateTreeEditorModule.StateTreeFactory"));
-    UFactory* Factory = nullptr;
-    if (FactoryClass)
+    // UStateTreeFactory::ConfigureProperties opens a modal schema-picker dialog
+    // when StateTreeSchemaClass is null, which is fatal in headless MCP. Resolve
+    // the schema class up front and call SetSchemaClass before CreateAsset.
+    // Default schema lives in GameplayStateTreeModule (not StateTreeModule).
+    FString SchemaPath = TEXT("/Script/GameplayStateTreeModule.StateTreeComponentSchema");
+    Params->TryGetStringField(TEXT("schema_class"), SchemaPath);
+
+    UClass* SchemaClass = FindObject<UClass>(nullptr, *SchemaPath);
+    if (!SchemaClass)
     {
-        Factory = NewObject<UFactory>(GetTransientPackage(), FactoryClass);
+        SchemaClass = LoadObject<UClass>(nullptr, *SchemaPath);
     }
+    if (!SchemaClass)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(
+            FString::Printf(TEXT("Schema class not found: %s"), *SchemaPath));
+    }
+
+    UStateTreeFactory* Factory = NewObject<UStateTreeFactory>(GetTransientPackage(), UStateTreeFactory::StaticClass());
+    Factory->SetSchemaClass(SchemaClass);
 
     FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
     IAssetTools& AssetTools = AssetToolsModule.Get();

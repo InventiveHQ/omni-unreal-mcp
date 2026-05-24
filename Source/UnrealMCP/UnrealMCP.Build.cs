@@ -87,6 +87,8 @@ public class UnrealMCP : ModuleRules
 					// StateTree modules (omni-unreal-mcp Phase 2.3)
 					"StateTreeModule",
 					"StateTreeEditorModule",
+					// GameplayStateTreeModule defines UStateTreeComponentSchema (default factory schema)
+					"GameplayStateTreeModule",
 					// Landscape modules (omni-unreal-mcp Phase 2.4)
 					"Landscape",
 					"LandscapeEditor",

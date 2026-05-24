@@ -34,7 +34,7 @@ def register_omni_statetree_tools(mcp: FastMCP):
     def statetree_create_asset(
         ctx: Context,
         asset_path: str,
-        schema_class: str = "/Script/StateTreeModule.StateTreeComponentSchema",
+        schema_class: str = "/Script/GameplayStateTreeModule.StateTreeComponentSchema",
     ) -> Dict[str, Any]:
         """Create a new empty StateTree asset.
 
@@ -42,7 +42,8 @@ def register_omni_statetree_tools(mcp: FastMCP):
             asset_path:   e.g. "/Game/AI/ST_TankUnit"
             schema_class: Object path of the StateTree schema class. The
                           default is the component schema used for actor-
-                          attached StateTreeComponents.
+                          attached StateTreeComponents (lives in the
+                          GameplayStateTree plugin, not StateTreeModule).
 
         UE API: UAssetTools::CreateAsset(name, path, UStateTree::StaticClass(), Factory)
         """
