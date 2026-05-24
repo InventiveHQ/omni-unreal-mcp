@@ -315,8 +315,9 @@ from tools.input_tools import register_input_tools
 from tools.procedural_tools import register_procedural_tools
 from tools.pcg_tools import register_pcg_tools
 
-# --- omni-unreal-mcp additions (Phase 1 ports / fresh impls) -------------
-from tools.omni_viewport_tools import register_omni_viewport_tools
+# --- omni-unreal-mcp additions -------------------------------------------
+# (viewport screenshots already covered by editor_tools.take_editor_screenshot
+#  inherited from the base; no separate omni viewport module needed.)
 from tools.omni_gameplay_tag_tools import register_omni_gameplay_tag_tools
 from tools.omni_datatable_tools import register_omni_datatable_tools
 from tools.omni_statetree_tools import register_omni_statetree_tools
@@ -354,8 +355,9 @@ MODULE_REGISTRY = {
     "input":                 register_input_tools,
     "procedural":            register_procedural_tools,
     "pcg":                   register_pcg_tools,
-    # omni-unreal-mcp additions (commands wired to C++ handlers added in Phase 2)
-    "omni_viewport":         register_omni_viewport_tools,
+    # omni-unreal-mcp additions
+    # gameplay_tag: C++ handler implemented (Phase 2.1) — needs editor build to test
+    # datatable/statetree/terrain: Python tool stubs only — C++ handlers pending (Phase 2.2+)
     "omni_gameplay_tag":     register_omni_gameplay_tag_tools,
     "omni_datatable":        register_omni_datatable_tools,
     "omni_statetree":        register_omni_statetree_tools,

@@ -28,6 +28,7 @@
 #include "Commands/UnrealMCPEQSCommands.h"
 #include "Commands/UnrealMCPPCGCommands.h"
 #include "Commands/UnrealMCPInputCommands.h"
+#include "Commands/UnrealMCPGameplayTagCommands.h"
 #include "UnrealMCPBridge.generated.h"
 
 class FMCPServerRunnable;
@@ -94,4 +95,5 @@ private:
 	TSharedPtr<FUnrealMCPEQSCommands> EQSCommands;
 	TSharedPtr<FUnrealMCPPCGCommands> PCGCommands;
 	TSharedPtr<FUnrealMCPInputCommands> InputCommands;
+	TSharedPtr<FUnrealMCPGameplayTagCommands> GameplayTagCommands;
 };

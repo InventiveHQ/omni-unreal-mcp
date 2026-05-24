@@ -34,7 +34,7 @@ work as fresh-implementation.
 | Domain | Priority | Source | Notes |
 |---|---|---|---|
 | ❌ **StateTree** | high | fresh impl | Modern UE AI; complements existing BT. Use `unreal.StateTree`, `EditorAssetLibrary` to create assets. Critical for RTS unit AI in Panzer Strike. |
-| ❌ **GameplayTags** | high | fresh impl | Create/list/query tags via `unreal.GameplayTagsManager`. RTS team/faction labeling. |
+| 🆕 **GameplayTags** | done (Phase 2.1) | fresh impl | C++ handler `FUnrealMCPGameplayTagCommands` registers `omni.gameplay_tag.{create,list,query}`. Uses `UGameplayTagsManager` + `IGameplayTagsEditorModule::AddNewGameplayTagToINI`. **Needs editor build to verify.** |
 | ❌ **DataTables** | high | fresh impl | `unreal.DataTable`, row struct creation. Tank stat sheets. |
 | ❌ **DataAssets** | high | fresh impl | Often paired with DataTables. |
 | ❌ **Enum/Struct creation** | high | fresh impl | Editor-driven creation of `UUserDefinedEnum` / `UUserDefinedStruct`. |
@@ -81,8 +81,13 @@ See `NOTICE.md` for full attribution. Quick reference:
 
 ## Working order
 
-Phase 1 (this commit): scaffold, attribution, roadmap, 1-2 demo ports.
-Phase 2: fill the 5 high-priority RTS gaps (StateTree, GameplayTags, DataTables, Landscape, Foliage).
-Phase 3: animation suite + audio + screenshots.
-Phase 4: Panzer-Strike composites layered on top.
-Phase 5: depth pass on Niagara (currently broken in base).
+Phase 1 (shipped): scaffold, attribution, roadmap, 5 Python tool stubs.
+Phase 1.5 (shipped): vendor-neutral scrub, `Claude/` → `agents/` rename, `DYNAMIC_MODE=1` default.
+Phase 2.1 (shipped): GameplayTag C++ handler + duplicate cleanup (removed `omni_viewport_tools.py`; `take_editor_screenshot` already in base).
+Phase 2.2 (next): DataTable C++ handler (RTS tank stats).
+Phase 2.3: StateTree C++ handler (RTS unit AI).
+Phase 2.4: Terrain heightmap-import C++ handler (geocode already pure Python; works as-is).
+Phase 3: Landscape + Foliage dedicated handlers (replace ad-hoc scripts).
+Phase 4: Animation suite + Sound Cues + UV mapping + PIE testing.
+Phase 5: Panzer-Strike composites (platoon spawning, move orders).
+Phase 6: depth pass on Niagara (currently broken in base).

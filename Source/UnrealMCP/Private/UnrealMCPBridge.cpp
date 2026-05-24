@@ -294,6 +294,7 @@ UUnrealMCPBridge::UUnrealMCPBridge()
     EQSCommands = MakeShared<FUnrealMCPEQSCommands>();
     PCGCommands = MakeShared<FUnrealMCPPCGCommands>();
     InputCommands = MakeShared<FUnrealMCPInputCommands>();
+    GameplayTagCommands = MakeShared<FUnrealMCPGameplayTagCommands>();
 }
 
 UUnrealMCPBridge::~UUnrealMCPBridge()
@@ -318,6 +319,7 @@ UUnrealMCPBridge::~UUnrealMCPBridge()
     EQSCommands.Reset();
     PCGCommands.Reset();
     InputCommands.Reset();
+    GameplayTagCommands.Reset();
 }
 
 // Initialize subsystem
@@ -477,6 +479,7 @@ void UUnrealMCPBridge::RegisterAllCommands()
     EQSCommands->RegisterCommands(Registry);
     PCGCommands->RegisterCommands(Registry);
     InputCommands->RegisterCommands(Registry);
+    GameplayTagCommands->RegisterCommands(Registry);
 
     UE_LOG(LogTemp, Display, TEXT("UnrealMCPBridge: Registered %d commands"), Registry.GetRegisteredCommands().Num());
 }

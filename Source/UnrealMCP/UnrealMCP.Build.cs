@@ -80,6 +80,8 @@ public class UnrealMCP : ModuleRules
 					"AIModule",
 					"GameplayTasks",
 					"GameplayTags",
+					// Editor module needed for AddNewGameplayTagToINI (omni-unreal-mcp)
+					"GameplayTagsEditor",
 				}
 			);
 
